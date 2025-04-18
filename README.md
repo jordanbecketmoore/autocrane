@@ -2,8 +2,8 @@
 A declarative implementation of the Crane image management tool for use in Kubernetes clusters
 
 ## Prerequisites
-- Go version: 
-- Kubebuilder version: 
+- Go version: 1.23.8
+- Kubebuilder version: v4.5.2
 
 ## kinds
 ### CraneImage
@@ -14,7 +14,7 @@ address is mirrored to the destination address.
 
 For example, the manifest below defines a CraneImage object mapping the DockerHub image `docker.io/nginx:1.21.6` to the same image in an ECR registry, `123456789012.dkr.ecr.us-west-2.amazonaws.com/nginx:1.21.6`. 
 ```
-apiVersion: autocrane.io/v1beta1
+apiVersion: image.autocrane.io/v1beta1
 kind: CraneImage
 spec: 
     source: 
@@ -36,6 +36,7 @@ that match the rule and deploys CraneImage objects for each matching image.
 - Prefix: Match an image its address prefix
 - RegEx: Match an image from a regular expression. 
 - SemVer: Match an image based on its tag according to a semantic version constraint. 
+- CalVer: Match an image based on its tag according to a calender version constraint. 
 
 ### CraneSecret
 A CraneSecret contains credentials for accessing a remote image registry.

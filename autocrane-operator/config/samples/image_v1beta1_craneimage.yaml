@@ -1,0 +1,15 @@
+apiVersion: image.autocrane.io/v1beta1
+kind: CraneImage
+metadata:
+  labels:
+    app.kubernetes.io/name: autocrane-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: craneimage-sample
+spec:
+  source:
+    registry: docker.io
+  destination:
+    registry: local-registry.default.svc.cluster.local:5000
+  image:
+    name: nginx
+    tag: 1.21.6
