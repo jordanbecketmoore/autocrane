@@ -96,49 +96,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Check if the image exists in the destination registry
 	log.Info("Checking if image exists in destination registry")
 
-	if _, err := crane.Head(destinationImage); err != nil {
-
-		log.Info("Image not found in destination registry. Copying from source.")
-
-		// Pull the image from the source registry
-		log.Info("Pulling image from source registry.")
-		image, err := crane.Pull(sourceImage)
-		if err != nil {
-			log.Error(err, "Failed to pull image from source registry.")
-
-			// Update status to reflect failure
-			craneImage.Status.State = "Failed"
-			craneImage.Status.Message = err.Error()
-			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
-				log.Error(statusErr, "Failed to update CraneImage status.")
-			}
-			return result, err
-		}
-
-		// Push the image to the destination registry
-		log.Info("Pushing image to destination registry.")
-		if err := crane.Push(image, destinationImage); err != nil {
-			log.Error(err, "Failed to push image to destination registry.")
-
-			// Update status to reflect failure
-			craneImage.Status.State = "Failed"
-			craneImage.Status.Message = err.Error()
-			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
-				log.Error(statusErr, "Failed to update CraneImage status.")
-			}
-			return result, err
-		}
-
-		log.Info("Image successfully pushed to destination registry.")
-
-		// Update status to reflect success
-		craneImage.Status.State = "Succeeded"
-		craneImage.Status.Message = "Image successfully copied to destination registry."
-		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
-			log.Error(statusErr, "Failed to update CraneImage status.")
-			return result, statusErr
-		}
-	} else {
+	if _, err := crane.Head(destinationImage); err == nil {
 		log.Info("Image already exists in destination registry.")
 
 		// Update status to reflect no action needed
@@ -148,6 +106,48 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			log.Error(statusErr, "Failed to update CraneImage status.")
 			return result, statusErr
 		}
+		return result, nil
+	}
+
+	log.Info("Image not found in destination registry. Copying from source.")
+
+	// Pull the image from the source registry
+	log.Info("Pulling image from source registry.")
+	image, err := crane.Pull(sourceImage)
+	if err != nil {
+		log.Error(err, "Failed to pull image from source registry.")
+
+		// Update status to reflect failure
+		craneImage.Status.State = "Failed"
+		craneImage.Status.Message = err.Error()
+		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+			log.Error(statusErr, "Failed to update CraneImage status.")
+		}
+		return result, err
+	}
+
+	// Push the image to the destination registry
+	log.Info("Pushing image to destination registry.")
+	if err := crane.Push(image, destinationImage); err != nil {
+		log.Error(err, "Failed to push image to destination registry.")
+
+		// Update status to reflect failure
+		craneImage.Status.State = "Failed"
+		craneImage.Status.Message = err.Error()
+		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+			log.Error(statusErr, "Failed to update CraneImage status.")
+		}
+		return result, err
+	}
+
+	log.Info("Image successfully pushed to destination registry.")
+
+	// Update status to reflect success
+	craneImage.Status.State = "Succeeded"
+	craneImage.Status.Message = "Image successfully copied to destination registry."
+	if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+		log.Error(statusErr, "Failed to update CraneImage status.")
+		return result, statusErr
 	}
 
 	return result, nil
