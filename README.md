@@ -3,7 +3,7 @@ A declarative implementation of the Crane image management tool for use in Kuber
 
 ## Prerequisites
 - Go version: 
-- Kubebuilder version: 
+- Kubebuilder version: v4.5.2
 
 ## kinds
 ### CraneImage
@@ -36,6 +36,7 @@ that match the rule and deploys CraneImage objects for each matching image.
 - Prefix: Match an image its address prefix
 - RegEx: Match an image from a regular expression. 
 - SemVer: Match an image based on its tag according to a semantic version constraint. 
+- CalVer: Match an image based on its tag according to a calender version constraint. 
 
 ### CraneSecret
 A CraneSecret contains credentials for accessing a remote image registry.
