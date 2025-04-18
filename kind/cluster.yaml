@@ -5,8 +5,6 @@ nodes:
   - role: control-plane
     extraPortMappings:
       # Expose the local registry on localhost:5000
-      - containerPort: 5000
+      - containerPort: 30000
         hostPort: 5000
         protocol: TCP
-  - role: worker
-  - role: worker
