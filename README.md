@@ -33,10 +33,7 @@ rule. The CraneImageRule resource controller checks source registry for images
 that match the rule and deploys CraneImage objects for each matching image.
 
 #### Proposed Sync Rules
-- Prefix: Match an image its address prefix
-- RegEx: Match an image from a regular expression. 
-- SemVer: Match an image based on its tag according to a semantic version constraint. 
-- CalVer: Match an image based on its tag according to a calender version constraint. 
-
-### CraneSecret
-A CraneSecret contains credentials for accessing a remote image registry.
+- Prefix: Match an image by its address prefix.
+- RegEx: Match an image using a regular expression.
+- SemVer: Match an image based on its tag according to a semantic version constraint.
+- CalVer: Match an image based on its tag according to a calendar version constraint.
