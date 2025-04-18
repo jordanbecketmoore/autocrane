@@ -71,10 +71,12 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	var craneImage imagev1beta1.CraneImage
 	if err := r.Get(ctx, req.NamespacedName, &craneImage); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("CraneImage resource not found. Ignoring since object must be deleted.")
+			log.Info("CraneImage resource not found. Ignoring since object must be deleted.",
+				"sourceRegistry", "", "destinationRegistry", "", "imageName", "", "imageTag", "")
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "Failed to get CraneImage resource.")
+		log.Error(err, "Failed to get CraneImage resource.",
+			"sourceRegistry", "", "destinationRegistry", "", "imageName", "", "imageTag", "")
 		return result, err
 	}
 
@@ -85,43 +87,52 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	sourceImage := sourceRegistry + "/" + imageName + ":" + imageTag
 	destinationImage := destinationRegistry + "/" + imageName + ":" + imageTag
-	log.Info("Reconciling CraneImage", "source", sourceImage, "destination", destinationImage)
+	log.Info("Reconciling CraneImage",
+		"sourceRegistry", sourceRegistry, "destinationRegistry", destinationRegistry, "imageName", imageName, "imageTag", imageTag)
 
 	// Check if the image exists in the destination registry
-	log.Info("Checking if image exists in destination registry", "destination", destinationRegistry, "image", imageName, "tag", imageTag)
+	log.Info("Checking if image exists in destination registry",
+		"sourceRegistry", sourceRegistry, "destinationRegistry", destinationRegistry, "imageName", imageName, "imageTag", imageTag)
 	if _, err := crane.Head(destinationImage); err != nil {
 
-		log.Info("Image not found in destination registry. Copying from source.", "source", sourceRegistry, "destination", destinationRegistry, "image", imageName, "tag", imageTag)
+		log.Info("Image not found in destination registry. Copying from source.",
+			"sourceRegistry", sourceRegistry, "destinationRegistry", destinationRegistry, "imageName", imageName, "imageTag", imageTag)
 
 		// Copy the image from source to destination
 		if err := crane.Copy(sourceImage, destinationImage); err != nil {
-			log.Error(err, "Failed to copy image from source to destination.")
+			log.Error(err, "Failed to copy image from source to destination.",
+				"sourceRegistry", sourceRegistry, "destinationRegistry", destinationRegistry, "imageName", imageName, "imageTag", imageTag)
 
 			// Update status to reflect failure
 			craneImage.Status.State = "Failed"
 			craneImage.Status.Message = err.Error()
 			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
-				log.Error(statusErr, "Failed to update CraneImage status.")
+				log.Error(statusErr, "Failed to update CraneImage status.",
+					"sourceRegistry", sourceRegistry, "destinationRegistry", destinationRegistry, "imageName", imageName, "imageTag", imageTag)
 			}
 			return result, err
 		}
-		log.Info("Image successfully copied to destination registry.", "destination", destinationRegistry)
+		log.Info("Image successfully copied to destination registry.",
+			"sourceRegistry", sourceRegistry, "destinationRegistry", destinationRegistry, "imageName", imageName, "imageTag", imageTag)
 
 		// Update status to reflect success
 		craneImage.Status.State = "Succeeded"
 		craneImage.Status.Message = "Image successfully copied to destination registry."
 		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
-			log.Error(statusErr, "Failed to update CraneImage status.")
+			log.Error(statusErr, "Failed to update CraneImage status.",
+				"sourceRegistry", sourceRegistry, "destinationRegistry", destinationRegistry, "imageName", imageName, "imageTag", imageTag)
 			return result, statusErr
 		}
 	} else {
-		log.Info("Image already exists in destination registry.", "destination", destinationRegistry)
+		log.Info("Image already exists in destination registry.",
+			"sourceRegistry", sourceRegistry, "destinationRegistry", destinationRegistry, "imageName", imageName, "imageTag", imageTag)
 
 		// Update status to reflect no action needed
 		craneImage.Status.State = "Succeeded"
 		craneImage.Status.Message = "Image already exists in destination registry."
 		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
-			log.Error(statusErr, "Failed to update CraneImage status.")
+			log.Error(statusErr, "Failed to update CraneImage status.",
+				"sourceRegistry", sourceRegistry, "destinationRegistry", destinationRegistry, "imageName", imageName, "imageTag", imageTag)
 			return result, statusErr
 		}
 	}
