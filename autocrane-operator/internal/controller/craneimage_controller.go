@@ -83,6 +83,12 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	sourceRegistry := craneImage.Spec.Source.Registry
+
+	// Standardize dockerhub registry addresses to docker.io
+	if sourceRegistry == "index.docker.io" {
+		sourceRegistry = "docker.io"
+	}
+
 	destinationRegistry := craneImage.Spec.Destination.Registry
 	imageName := craneImage.Spec.Image.Name
 	imageTag := craneImage.Spec.Image.Tag
@@ -172,7 +178,6 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				return result, err
 			}
 			log.Info("Successfully unmarshalled Docker config JSON.")
-			// TODO pull creds from dockerConfig.AuthConfigs
 			for registry, authConfig := range dockerConfig.AuthConfigs {
 				// docker.io is represented as index.docker.io in the Docker config JSON
 				// so we replace it with docker.io
