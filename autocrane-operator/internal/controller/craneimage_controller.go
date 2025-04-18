@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -28,6 +30,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	imagev1beta1 "autocrane.io/api/v1beta1"
+	"github.com/docker/cli/cli/config/configfile"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // CraneImageReconciler reconciles a CraneImage object
@@ -113,17 +117,76 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Pull the image from the source registry
 	log.Info("Pulling image from source registry.")
-	image, err := crane.Pull(sourceImage)
-	if err != nil {
-		log.Error(err, "Failed to pull image from source registry.")
 
-		// Update status to reflect failure
-		craneImage.Status.State = "Failed"
-		craneImage.Status.Message = err.Error()
-		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
-			log.Error(statusErr, "Failed to update CraneImage status.")
+	if craneImage.Spec.Source.CredentialsSecret != "" {
+		log.Info("Using credentials secret for source registry.")
+
+		// Fetch the secret
+		var secret corev1.Secret
+		secretName := client.ObjectKey{
+			Namespace: craneImage.Namespace,
+			Name:      craneImage.Spec.Source.CredentialsSecret,
 		}
-		return result, err
+		if err := r.Get(ctx, secretName, &secret); err != nil {
+			log.Error(err, "Failed to fetch credentials secret for source registry.")
+
+			// Update status to reflect failure
+			craneImage.Status.State = "Failed"
+			craneImage.Status.Message = "Failed to fetch credentials secret: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+			}
+			return result, err
+		}
+
+		log.Info("Successfully fetched credentials secret for source registry.")
+
+		// Check if the secret type is DockerConfigJson
+		if secret.Type == corev1.SecretTypeDockerConfigJson {
+			// Get encoded Docker config JSON
+			dockerConfigJSON := secret.Data[corev1.DockerConfigJsonKey]
+
+			// Base64 decode dockerConfigJSON
+			decodedDockerConfigJSON, err := base64.StdEncoding.DecodeString(string(dockerConfigJSON))
+			if err != nil {
+				log.Error(err, "Failed to decode Docker config JSON.")
+
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = "Failed to decode Docker config JSON: " + err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
+				}
+				return result, err
+			}
+			// Use the decoded Docker config JSON to authenticate with the source registry
+			log.Info("Unmarshalling Docker config JSON.")
+			var dockerConfig configfile.ConfigFile
+			if err := json.Unmarshal(decodedDockerConfigJSON, &dockerConfig); err != nil {
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = "Failed to unmarshal Docker config JSON: " + err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
+				}
+				return result, err
+			}
+			log.Info("Successfully unmarshalled Docker config JSON.")
+			// TODO pull creds from dockerConfig
+		}
+
+	} else {
+		image, err := crane.Pull(sourceImage)
+		if err != nil {
+			log.Error(err, "Failed to pull image from source registry.")
+
+			// Update status to reflect failure
+			craneImage.Status.State = "Failed"
+			craneImage.Status.Message = err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+			}
+		}
 	}
 
 	// Push the image to the destination registry
