@@ -186,11 +186,12 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				}
 				// Check if the registry in the Docker config JSON matches the source registry
 				if registry == sourceRegistry {
-					log.Info("Found matching registry in Docker config JSON.")
+					log.Info("Found matching registry in Docker config JSON.", "dockerRegistry", registry)
 					// TODO: Use the authConfig to authenticate with the source registry
+					// What is the most general auth object that we can produce here?
 				}
 			}
-		} // block must either return or define image to continue
+		} // TODO: block must either return or define image to continue
 
 	} else {
 		image, err := crane.Pull(sourceImage)
