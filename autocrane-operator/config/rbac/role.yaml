@@ -1,11 +1,32 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  labels:
-    app.kubernetes.io/name: autocrane-operator
-    app.kubernetes.io/managed-by: kustomize
   name: manager-role
 rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - image.autocrane.io
+  resources:
+  - craneimages
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - image.autocrane.io
+  resources:
+  - craneimages/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - image.autocrane.io
+  resources:
+  - craneimages/status
+  verbs:
+  - get
+  - patch
+  - update
