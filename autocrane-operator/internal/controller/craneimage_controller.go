@@ -172,8 +172,20 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				return result, err
 			}
 			log.Info("Successfully unmarshalled Docker config JSON.")
-			// TODO pull creds from dockerConfig
-		}
+			// TODO pull creds from dockerConfig.AuthConfigs
+			for registry, authConfig := range dockerConfig.AuthConfigs {
+				// docker.io is represented as index.docker.io in the Docker config JSON
+				// so we replace it with docker.io
+				if registry == "index.docker.io" {
+					registry = "docker.io"
+				}
+				// Check if the registry in the Docker config JSON matches the source registry
+				if registry == sourceRegistry {
+					log.Info("Found matching registry in Docker config JSON.")
+					// TODO: Use the authConfig to authenticate with the source registry
+				}
+			}
+		} // block must either return or define image to continue
 
 	} else {
 		image, err := crane.Pull(sourceImage)
