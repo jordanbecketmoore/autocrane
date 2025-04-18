@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= jordanbmoore/autocrane:latest
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -113,7 +113,7 @@ docker-push: ## Push docker image with the manager.
 .PHONY: kind-load
 kind-load: docker-build ## Load the docker image into the kind cluster.
 	@kind load docker-image ${IMG} --name autocrane
-	@kubectl restart rollout deployment autocrane-operator-controller-manager -n autocrane-operator-system
+	@kubectl rollout restart deployment autocrane-operator-controller-manager -n autocrane-operator-system
 
 # PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
