@@ -109,9 +109,15 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			"imageName", imageName,
 			"imageTag", imageTag)
 
-		// Copy the image from source to destination
-		if err := crane.Copy(sourceImage, destinationImage); err != nil {
-			log.Error(err, "Failed to copy image from source to destination.",
+		// Pull the image from the source registry
+		log.Info("Pulling image from source registry.",
+			"sourceRegistry", sourceRegistry,
+			"destinationRegistry", destinationRegistry,
+			"imageName", imageName,
+			"imageTag", imageTag)
+		image, err := crane.Pull(sourceImage)
+		if err != nil {
+			log.Error(err, "Failed to pull image from source registry.",
 				"sourceRegistry", sourceRegistry,
 				"destinationRegistry", destinationRegistry,
 				"imageName", imageName,
@@ -129,7 +135,34 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 			return result, err
 		}
-		log.Info("Image successfully copied to destination registry.",
+
+		// Push the image to the destination registry
+		log.Info("Pushing image to destination registry.",
+			"sourceRegistry", sourceRegistry,
+			"destinationRegistry", destinationRegistry,
+			"imageName", imageName,
+			"imageTag", imageTag)
+		if err := crane.Push(image, destinationImage); err != nil {
+			log.Error(err, "Failed to push image to destination registry.",
+				"sourceRegistry", sourceRegistry,
+				"destinationRegistry", destinationRegistry,
+				"imageName", imageName,
+				"imageTag", imageTag)
+
+			// Update status to reflect failure
+			craneImage.Status.State = "Failed"
+			craneImage.Status.Message = err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.",
+					"sourceRegistry", sourceRegistry,
+					"destinationRegistry", destinationRegistry,
+					"imageName", imageName,
+					"imageTag", imageTag)
+			}
+			return result, err
+		}
+
+		log.Info("Image successfully pushed to destination registry.",
 			"sourceRegistry", sourceRegistry,
 			"destinationRegistry", destinationRegistry,
 			"imageName", imageName,
