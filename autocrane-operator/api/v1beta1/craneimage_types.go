@@ -25,11 +25,32 @@ import (
 
 // CraneImageSpec defines the desired state of CraneImage.
 type CraneImageSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Source defines the source registry details.
+	Source RegistryDetails `json:"source,omitempty"`
 
-	// Foo is an example field of CraneImage. Edit craneimage_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Destination defines the destination registry details.
+	Destination RegistryDetails `json:"destination,omitempty"`
+
+	// Image defines the image details.
+	Image ImageDetails `json:"image,omitempty"`
+}
+
+// RegistryDetails defines the details of a container registry.
+type RegistryDetails struct {
+	// Registry is the URL of the container registry.
+	Registry string `json:"registry,omitempty"`
+
+	// CredentialsSecret is the name of the secret containing credentials for the registry.
+	CredentialsSecret string `json:"credentialsSecret,omitempty"`
+}
+
+// ImageDetails defines the details of the container image.
+type ImageDetails struct {
+	// Name is the name of the container image.
+	Name string `json:"name,omitempty"`
+
+	// Tag is the tag of the container image.
+	Tag string `json:"tag,omitempty"`
 }
 
 // CraneImageStatus defines the observed state of CraneImage.
