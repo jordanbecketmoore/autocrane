@@ -6,4 +6,10 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: craneimage-sample
 spec:
-  # TODO(user): Add fields here
+  source:
+    registry: docker.io
+  destination:
+    registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+  image:
+    name: nginx
+    tag: 1.21.6
