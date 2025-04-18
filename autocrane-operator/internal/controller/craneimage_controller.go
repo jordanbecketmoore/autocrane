@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -33,6 +34,17 @@ import (
 type CraneImageReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Clock
+}
+
+type realClock struct{}
+
+func (realClock) Now() time.Time { return time.Now() }
+
+// Clock knows how to get the current time.
+// It can be used to fake out timing for testing.
+type Clock interface {
+	Now() time.Time
 }
 
 // +kubebuilder:rbac:groups=image.autocrane.io,resources=craneimages,verbs=get;list;watch;create;update;patch;delete
@@ -51,6 +63,10 @@ type CraneImageReconciler struct {
 func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
+	// Define result with requeue after 1 minute
+	result := ctrl.Result{
+		RequeueAfter: time.Minute,
+	}
 	// Fetch the CraneImage instance
 	var craneImage imagev1beta1.CraneImage
 	if err := r.Get(ctx, req.NamespacedName, &craneImage); err != nil {
@@ -59,7 +75,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get CraneImage resource.")
-		return ctrl.Result{}, err
+		return result, err
 	}
 
 	sourceRegistry := craneImage.Spec.Source.Registry
@@ -74,23 +90,51 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Check if the image exists in the destination registry
 	log.Info("Checking if image exists in destination registry", "destination", destinationRegistry, "image", imageName, "tag", imageTag)
 	if _, err := crane.Head(destinationImage); err != nil {
+
 		log.Info("Image not found in destination registry. Copying from source.", "source", sourceRegistry, "destination", destinationRegistry, "image", imageName, "tag", imageTag)
 
 		// Copy the image from source to destination
 		if err := crane.Copy(sourceImage, destinationImage); err != nil {
 			log.Error(err, "Failed to copy image from source to destination.")
-			return ctrl.Result{}, err
+
+			// Update status to reflect failure
+			craneImage.Status.State = "Failed"
+			craneImage.Status.Message = err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+			}
+			return result, err
 		}
 		log.Info("Image successfully copied to destination registry.", "destination", destinationRegistry)
+
+		// Update status to reflect success
+		craneImage.Status.State = "Succeeded"
+		craneImage.Status.Message = "Image successfully copied to destination registry."
+		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+			log.Error(statusErr, "Failed to update CraneImage status.")
+			return result, statusErr
+		}
 	} else {
 		log.Info("Image already exists in destination registry.", "destination", destinationRegistry)
+
+		// Update status to reflect no action needed
+		craneImage.Status.State = "Succeeded"
+		craneImage.Status.Message = "Image already exists in destination registry."
+		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+			log.Error(statusErr, "Failed to update CraneImage status.")
+			return result, statusErr
+		}
 	}
 
-	return ctrl.Result{}, nil
+	return result, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *CraneImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// set up a real clock, since we're not in a test
+	if r.Clock == nil {
+		r.Clock = realClock{}
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&imagev1beta1.CraneImage{}).
 		Named("craneimage").
