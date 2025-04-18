@@ -19,6 +19,8 @@ package controller
 import (
 	"context"
 
+	"github.com/google/go-containerregistry/pkg/crane"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,9 +49,42 @@ type CraneImageReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.4/pkg/reconcile
 func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = logf.FromContext(ctx)
+	log := logf.FromContext(ctx)
 
-	// TODO(user): your logic here
+	// Fetch the CraneImage instance
+	var craneImage imagev1beta1.CraneImage
+	if err := r.Get(ctx, req.NamespacedName, &craneImage); err != nil {
+		if errors.IsNotFound(err) {
+			log.Info("CraneImage resource not found. Ignoring since object must be deleted.")
+			return ctrl.Result{}, nil
+		}
+		log.Error(err, "Failed to get CraneImage resource.")
+		return ctrl.Result{}, err
+	}
+
+	sourceRegistry := craneImage.Spec.Source.Registry
+	destinationRegistry := craneImage.Spec.Destination.Registry
+	imageName := craneImage.Spec.Image.Name
+	imageTag := craneImage.Spec.Image.Tag
+
+	sourceImage := sourceRegistry + "/" + imageName + ":" + imageTag
+	destinationImage := destinationRegistry + "/" + imageName + ":" + imageTag
+	log.Info("Reconciling CraneImage", "source", sourceImage, "destination", destinationImage)
+
+	// Check if the image exists in the destination registry
+	log.Info("Checking if image exists in destination registry", "destination", destinationRegistry, "image", imageName, "tag", imageTag)
+	if _, err := crane.Head(destinationImage); err != nil {
+		log.Info("Image not found in destination registry. Copying from source.", "source", sourceRegistry, "destination", destinationRegistry, "image", imageName, "tag", imageTag)
+
+		// Copy the image from source to destination
+		if err := crane.Copy(sourceImage, destinationImage); err != nil {
+			log.Error(err, "Failed to copy image from source to destination.")
+			return ctrl.Result{}, err
+		}
+		log.Info("Image successfully copied to destination registry.", "destination", destinationRegistry)
+	} else {
+		log.Info("Image already exists in destination registry.", "destination", destinationRegistry)
+	}
 
 	return ctrl.Result{}, nil
 }

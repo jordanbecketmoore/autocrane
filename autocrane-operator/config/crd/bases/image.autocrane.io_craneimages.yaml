@@ -39,10 +39,38 @@ spec:
           spec:
             description: CraneImageSpec defines the desired state of CraneImage.
             properties:
-              foo:
-                description: Foo is an example field of CraneImage. Edit craneimage_types.go
-                  to remove/update
-                type: string
+              destination:
+                description: Destination defines the destination registry details.
+                properties:
+                  credentialsSecret:
+                    description: CredentialsSecret is the name of the secret containing
+                      credentials for the registry.
+                    type: string
+                  registry:
+                    description: Registry is the URL of the container registry.
+                    type: string
+                type: object
+              image:
+                description: Image defines the image details.
+                properties:
+                  name:
+                    description: Name is the name of the container image.
+                    type: string
+                  tag:
+                    description: Tag is the tag of the container image.
+                    type: string
+                type: object
+              source:
+                description: Source defines the source registry details.
+                properties:
+                  credentialsSecret:
+                    description: CredentialsSecret is the name of the secret containing
+                      credentials for the registry.
+                    type: string
+                  registry:
+                    description: Registry is the URL of the container registry.
+                    type: string
+                type: object
             type: object
           status:
             description: CraneImageStatus defines the observed state of CraneImage.
