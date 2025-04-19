@@ -8,8 +8,9 @@ metadata:
 spec:
   source:
     registry: docker.io
+    credentialsSecret: dockerhub-secret
   destination:
     registry: local-registry.default.svc.cluster.local:5000
   image:
-    name: nginx
-    tag: 1.21.6
+    name: jordanbmoore/test-autocrane
+    tag: latest
