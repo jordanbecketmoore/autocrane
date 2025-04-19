@@ -134,7 +134,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return result, nil
 		}
 		log.Info("Successfully fetched credentials secret for source registry.")
-		sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry)
+		sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry, log)
 		if err != nil {
 			log.Error(err, "Failed to create authenticator from credentials secret.")
 			// Update status to reflect failure
@@ -190,7 +190,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return result, nil
 		}
 		log.Info("Successfully fetched credentials secret for destination registry.")
-		destinationAuth, err = secretToAuthenticator(&destinationRegistryCredentialsSecret, sourceRegistry)
+		destinationAuth, err = secretToAuthenticator(&destinationRegistryCredentialsSecret, sourceRegistry, log)
 		if err != nil {
 			log.Error(err, "Failed to create authenticator from credentials secret.")
 			// Update status to reflect failure
