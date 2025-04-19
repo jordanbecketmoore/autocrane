@@ -63,6 +63,21 @@ spec:
         name: nginx
         tag: 1.21.6
 ```
+You can do the same for `destination` registries: 
+```
+apiVersion: image.autocrane.io/v1beta1
+kind: CraneImage
+spec: 
+    source: 
+        registry: docker.io
+        credentialsSecret: dockerhub-creds
+    destination: 
+        registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+        credentialsSecret: ecr-creds
+    image: 
+        name: nginx
+        tag: 1.21.6
+```
 
 ### CraneImageRule
 A CraneImageRule defines a set of CraneImage objects according to some matching
