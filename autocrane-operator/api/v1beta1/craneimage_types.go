@@ -42,6 +42,17 @@ type RegistryDetails struct {
 
 	// CredentialsSecret is the name of the secret containing credentials for the registry.
 	CredentialsSecret string `json:"credentialsSecret,omitempty"`
+
+	// Prefix is the prefix for the image in the registry.
+	Prefix string `json:"prefix,omitempty"`
+}
+
+// GetFullPrefix returns the full prefix for the registry, including the tailing slash.
+func (rd *RegistryDetails) GetFullPrefix() string {
+	if rd.Prefix == "" {
+		return rd.Registry + "/"
+	}
+	return rd.Registry + "/" + rd.Prefix + "/"
 }
 
 // ImageDetails defines the details of the container image.

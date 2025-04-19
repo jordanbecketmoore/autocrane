@@ -99,11 +99,13 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	imageName := craneImage.Spec.Image.Name
 	imageTag := craneImage.Spec.Image.Tag
 
-	sourceImage := sourceRegistry + "/" + imageName + ":" + imageTag
-	destinationImage := destinationRegistry + "/" + imageName + ":" + imageTag
+	sourceImage := craneImage.Spec.Destination.GetFullPrefix() + imageName + ":" + imageTag
+	destinationImage := craneImage.Spec.Destination.GetFullPrefix() + imageName + ":" + imageTag
 
 	log = log.WithValues("sourceRegistry", sourceRegistry,
 		"destinationRegistry", destinationRegistry,
+		"sourcePrefix", craneImage.Spec.Source.Prefix,
+		"destinationPrefix", craneImage.Spec.Destination.Prefix,
 		"imageName", imageName,
 		"imageTag", imageTag)
 
