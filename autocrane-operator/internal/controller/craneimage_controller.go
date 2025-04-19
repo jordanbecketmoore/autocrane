@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -128,8 +129,9 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			craneImage.Status.Message = "Failed to fetch credentials secret: " + err.Error()
 			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
 				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
 			}
-			return result, err
+			return result, nil
 		}
 		log.Info("Successfully fetched credentials secret for source registry.")
 		sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry)
@@ -140,9 +142,11 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			craneImage.Status.Message = "Failed to create authenticator from credentials secret: " + err.Error()
 			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
 				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
 			}
-			return result, err
+			return result, nil
 		}
+		log.Info("Successfully created authenticator from destination credentials secret.")
 	} else {
 		log.Info("No credentials secret provided for source registry.")
 		sourceAuth = authn.Anonymous
@@ -157,8 +161,9 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		craneImage.Status.Message = "Failed to get image digest from source registry: " + err.Error()
 		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
 			log.Error(statusErr, "Failed to update CraneImage status.")
+			return ctrl.Result{}, statusErr
 		}
-		return result, err
+		return result, nil
 	}
 	log.Info("Successfully fetched image digest from source registry.")
 
@@ -180,11 +185,24 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			craneImage.Status.Message = "Failed to fetch credentials secret: " + err.Error()
 			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
 				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
 			}
-			return result, err
+			return result, nil
 		}
 		log.Info("Successfully fetched credentials secret for destination registry.")
 		destinationAuth, err = secretToAuthenticator(&destinationRegistryCredentialsSecret, sourceRegistry)
+		if err != nil {
+			log.Error(err, "Failed to create authenticator from credentials secret.")
+			// Update status to reflect failure
+			craneImage.Status.State = "Failed"
+			craneImage.Status.Message = "Failed to create authenticator from credentials secret: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+			return result, nil
+		}
+		log.Info("Successfully created authenticator from destination credentials secret.")
 	} else {
 		log.Info("No credentials secret provided for destination registry.")
 		destinationAuth = authn.Anonymous
@@ -204,6 +222,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			craneImage.Status.Message = "Image already exists in destination registry."
 			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
 				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
 			}
 			return result, nil
 		}
@@ -225,8 +244,9 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		craneImage.Status.Message = err.Error()
 		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
 			log.Error(statusErr, "Failed to update CraneImage status.")
+			return ctrl.Result{}, statusErr
 		}
-		return result, err
+		return result, nil
 	}
 	log.Info("Successfully pulled image from source registry.")
 
@@ -242,8 +262,9 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		craneImage.Status.Message = err.Error()
 		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
 			log.Error(statusErr, "Failed to update CraneImage status.")
+			return ctrl.Result{}, statusErr
 		}
-		return result, err
+		return result, nil
 	}
 	log.Info("Successfully pushed image to destination registry.")
 
@@ -295,9 +316,10 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 	return nil, fmt.Errorf("unable to create authenticator for registry: %x", registry)
 }
 
-func secretToAuthenticator(secret *corev1.Secret, registry string) (authn.Authenticator, error) {
+func secretToAuthenticator(secret *corev1.Secret, registry string, log logr.Logger) (authn.Authenticator, error) {
 	// Check if the secret type is DockerConfigJson type or has non-empty DockerConfigJson key
 	if (secret.Type == corev1.SecretTypeDockerConfigJson) || (secret.Data[corev1.DockerConfigJsonKey] != nil) {
+		log.Info("Using Docker config JSON secret.")
 		// Get encoded Docker config JSON
 		dockerConfigJSON := secret.Data[corev1.DockerConfigJsonKey]
 
@@ -315,6 +337,8 @@ func secretToAuthenticator(secret *corev1.Secret, registry string) (authn.Authen
 		// Get the username and password from the secret
 		username := string(secret.Data[corev1.BasicAuthUsernameKey])
 		password := string(secret.Data[corev1.BasicAuthPasswordKey])
+		// TODO REMOVE
+		log.Info("Using Basic Auth secret.", "username", username, "password", password)
 		return authn.FromConfig(authn.AuthConfig{
 			Username: username,
 			Password: password,
