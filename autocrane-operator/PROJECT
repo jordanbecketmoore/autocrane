@@ -17,4 +17,13 @@ resources:
   kind: CraneImage
   path: autocrane.io/api/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: autocrane.io
+  group: image
+  kind: CraneImagePolicy
+  path: autocrane.io/api/v1beta1
+  version: v1beta1
 version: "3"
