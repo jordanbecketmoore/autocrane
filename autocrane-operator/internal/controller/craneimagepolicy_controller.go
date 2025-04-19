@@ -35,15 +35,6 @@ type CraneImagePolicyReconciler struct {
 	Scheme *runtime.Scheme
 	Clock
 }
-type realClock struct{}
-
-func (realClock) Now() time.Time { return time.Now() }
-
-// Clock knows how to get the current time.
-// It can be used to fake out timing for testing.
-type Clock interface {
-	Now() time.Time
-}
 
 // +kubebuilder:rbac:groups=image.autocrane.io,resources=craneimagepolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=image.autocrane.io,resources=craneimagepolicies/status,verbs=get;update;patch
