@@ -134,7 +134,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return result, nil
 		}
 		log.Info("Successfully fetched credentials secret for source registry.")
-		sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry, log)
+		sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry, &log)
 		if err != nil {
 			log.Error(err, "Failed to create authenticator from credentials secret.")
 			// Update status to reflect failure
@@ -190,7 +190,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return result, nil
 		}
 		log.Info("Successfully fetched credentials secret for destination registry.")
-		destinationAuth, err = secretToAuthenticator(&destinationRegistryCredentialsSecret, sourceRegistry, log)
+		destinationAuth, err = secretToAuthenticator(&destinationRegistryCredentialsSecret, sourceRegistry, &log)
 		if err != nil {
 			log.Error(err, "Failed to create authenticator from credentials secret.")
 			// Update status to reflect failure
@@ -316,7 +316,7 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 	return nil, fmt.Errorf("unable to create authenticator for registry: %x", registry)
 }
 
-func secretToAuthenticator(secret *corev1.Secret, registry string, log logr.Logger) (authn.Authenticator, error) {
+func secretToAuthenticator(secret *corev1.Secret, registry string, log *logr.Logger) (authn.Authenticator, error) {
 	// Check if the secret type is DockerConfigJson type or has non-empty DockerConfigJson key
 	if (secret.Type == corev1.SecretTypeDockerConfigJson) || (secret.Data[corev1.DockerConfigJsonKey] != nil) {
 		log.Info("Using Docker config JSON secret.")
