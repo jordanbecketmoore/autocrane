@@ -333,22 +333,12 @@ func secretToAuthenticator(secret *corev1.Secret, registry string, log *logr.Log
 
 	}
 	// Check if the secret type is BasicAuth or has non-empty username and password
-	if secret.Type == corev1.SecretTypeBasicAuth {
+	if (secret.Type == corev1.SecretTypeBasicAuth) || (secret.Data[corev1.BasicAuthUsernameKey] != nil && secret.Data[corev1.BasicAuthPasswordKey] != nil) {
 		// Get the username and password from the secret
 		username := string(secret.Data[corev1.BasicAuthUsernameKey])
 		password := string(secret.Data[corev1.BasicAuthPasswordKey])
 		// TODO REMOVE
 		log.Info("Using Basic Auth secret.", "username", username, "password", password)
-		return authn.FromConfig(authn.AuthConfig{
-			Username: username,
-			Password: password,
-		}), nil
-	}
-
-	if secret.Data["username"] != nil && secret.Data["password"] != nil {
-		username := string(secret.Data["username"])
-		password := string(secret.Data["password"])
-		log.Info("Using username and password from secret.", "username", username, "password", password)
 		return authn.FromConfig(authn.AuthConfig{
 			Username: username,
 			Password: password,
