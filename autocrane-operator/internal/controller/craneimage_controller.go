@@ -319,7 +319,7 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 func secretToAuthenticator(secret *corev1.Secret, registry string, log *logr.Logger) (authn.Authenticator, error) {
 	// Check if the secret type is DockerConfigJson type or has non-empty DockerConfigJson key
 	if (secret.Type == corev1.SecretTypeDockerConfigJson) || (secret.Data[corev1.DockerConfigJsonKey] != nil) {
-		log.Info("Using Docker config JSON secret.")
+		log.Info("Using Docker config JSON secret")
 		// Get encoded Docker config JSON
 		dockerConfigJSON := secret.Data[corev1.DockerConfigJsonKey]
 
@@ -338,7 +338,7 @@ func secretToAuthenticator(secret *corev1.Secret, registry string, log *logr.Log
 		username := string(secret.Data[corev1.BasicAuthUsernameKey])
 		password := string(secret.Data[corev1.BasicAuthPasswordKey])
 		// TODO REMOVE
-		log.Info("Using Basic Auth secret.", "username", username, "password", password)
+		log.Info("Using Basic Auth secret")
 		return authn.FromConfig(authn.AuthConfig{
 			Username: username,
 			Password: password,
