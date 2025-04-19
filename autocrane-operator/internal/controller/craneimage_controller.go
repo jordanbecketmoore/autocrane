@@ -368,5 +368,34 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 		}), nil
 	}
 
-	return nil, fmt.Errorf("Unable to create authenticator for registry: %x", registry)
+	return nil, fmt.Errorf("unable to create authenticator for registry: %x", registry)
+}
+
+func secretToAuthenticator(secret *corev1.Secret, registry string) (authn.Authenticator, error) {
+	// Check if the secret type is DockerConfigJson type or has non-empty DockerConfigJson key
+	if (secret.Type == corev1.SecretTypeDockerConfigJson) || (secret.Data[corev1.DockerConfigJsonKey] != nil) {
+		// Get encoded Docker config JSON
+		dockerConfigJSON := secret.Data[corev1.DockerConfigJsonKey]
+
+		// Decode the Docker config JSON
+		var dockerConfig configfile.ConfigFile
+		if err := json.Unmarshal(dockerConfigJSON, &dockerConfig); err != nil {
+			return nil, err
+		}
+
+		return configFileToAuthenticator(dockerConfig, registry)
+
+	}
+	// Check if the secret type is BasicAuth or has non-empty username and password
+	if (secret.Type == corev1.SecretTypeBasicAuth) || (secret.Data[corev1.BasicAuthUsernameKey] != nil && secret.Data[corev1.BasicAuthPasswordKey] != nil) {
+		// Get the username and password from the secret
+		username := string(secret.Data[corev1.BasicAuthUsernameKey])
+		password := string(secret.Data[corev1.BasicAuthPasswordKey])
+		return authn.FromConfig(authn.AuthConfig{
+			Username: username,
+			Password: password,
+		}), nil
+	}
+
+	return nil, fmt.Errorf("secret could not be converted to authenticator")
 }
