@@ -25,7 +25,44 @@ spec:
         name: nginx
         tag: 1.21.6
 ```
-
+`CraneImage` objects can take `docker-registry` type secrets as `source` and `destination` `credentialSecret` objects. 
+For example, this Secret,
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: dockerhub-creds
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsidXNlcm5hbWUiOiJ1c2VyIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsImF1dGgiOiJkWE5sY2pwd1lYTnpkMjl5WkE9PSJ9fX0=
+```
+contains the docker config.json file: 
+```
+{
+  "auths": {
+    "docker.io": {
+      "username": "user",
+      "password": "password",
+      "auth": "dXNlcjpwYXNzd29yZA=="
+    }
+  }
+}
+```
+This contains dockerhub credentials, so I can use it to authenticate my source registry in the CraneImage below.
+```
+apiVersion: image.autocrane.io/v1beta1
+kind: CraneImage
+spec: 
+    source: 
+        registry: docker.io
+        credentialsSecret: dockerhub-creds
+    destination: 
+        registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+    image: 
+        name: nginx
+        tag: 1.21.6
+```
 
 ### CraneImageRule
 A CraneImageRule defines a set of CraneImage objects according to some matching
