@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -57,7 +56,7 @@ type Clock interface {
 // +kubebuilder:rbac:groups=image.autocrane.io,resources=craneimages,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=image.autocrane.io,resources=craneimages/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=image.autocrane.io,resources=craneimages/finalizers,verbs=update
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get,list
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -159,8 +158,6 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			// Get encoded Docker config JSON
 			dockerConfigJSON := secret.Data[corev1.DockerConfigJsonKey]
 
-			// Base64 decode dockerConfigJSON
-			decodedDockerConfigJSON, err := base64.StdEncoding.DecodeString(string(dockerConfigJSON))
 			if err != nil {
 				log.Error(err, "Failed to decode Docker config JSON.")
 
@@ -175,7 +172,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			// Use the decoded Docker config JSON to authenticate with the source registry
 			log.Info("Unmarshalling Docker config JSON.")
 			var dockerConfig configfile.ConfigFile
-			if err := json.Unmarshal(decodedDockerConfigJSON, &dockerConfig); err != nil {
+			if err := json.Unmarshal(dockerConfigJSON, &dockerConfig); err != nil {
 				// Update status to reflect failure
 				craneImage.Status.State = "Failed"
 				craneImage.Status.Message = "Failed to unmarshal Docker config JSON: " + err.Error()
