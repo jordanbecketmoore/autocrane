@@ -7,10 +7,10 @@ metadata:
   name: craneimage-sample
 spec:
   source:
+    registry: local-registry.default.svc.cluster.local:5000
+  destination:
     registry: docker.io
     credentialsSecret: dockerhub-secret
-  destination:
-    registry: local-registry.default.svc.cluster.local:5000
   image:
     name: jordanbmoore/test-autocrane
-    tag: latest
+    tag: upload-test

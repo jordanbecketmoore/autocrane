@@ -228,19 +228,100 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// ################################### PUSH ##########################################
 	// Push the image to the destination registry
 	log.Info("Pushing image to destination registry.")
-	if err := crane.Push(image, destinationImage); err != nil {
-		log.Error(err, "Failed to push image to destination registry.")
+	if craneImage.Spec.Destination.CredentialsSecret != "" {
+		log.Info("Using credentials secret for destination registry.")
 
-		// Update status to reflect failure
-		craneImage.Status.State = "Failed"
-		craneImage.Status.Message = err.Error()
-		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
-			log.Error(statusErr, "Failed to update CraneImage status.")
+		// Fetch the secret
+		var secret corev1.Secret
+		secretName := client.ObjectKey{
+			Namespace: craneImage.Namespace,
+			Name:      craneImage.Spec.Destination.CredentialsSecret,
 		}
-		return result, err
-	}
+		if err := r.Get(ctx, secretName, &secret); err != nil {
+			log.Error(err, "Failed to fetch credentials secret for destination registry.")
 
-	log.Info("Image successfully pushed to destination registry.")
+			// Update status to reflect failure
+			craneImage.Status.State = "Failed"
+			craneImage.Status.Message = "Failed to fetch credentials secret: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+			}
+			return result, err
+		}
+
+		log.Info("Successfully fetched credentials secret for destination registry.")
+
+		// Check if the secret type is DockerConfigJson
+		if secret.Type == corev1.SecretTypeDockerConfigJson {
+			// Get encoded Docker config JSON
+			dockerConfigJSON := secret.Data[corev1.DockerConfigJsonKey]
+
+			if err != nil {
+				log.Error(err, "Failed to decode Docker config JSON.")
+
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = "Failed to decode Docker config JSON: " + err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
+				}
+				return result, err
+			}
+			// Use the decoded Docker config JSON to authenticate with the source registry
+			log.Info("Unmarshalling Docker config JSON.")
+			var dockerConfig configfile.ConfigFile
+			if err := json.Unmarshal(dockerConfigJSON, &dockerConfig); err != nil {
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = "Failed to unmarshal Docker config JSON: " + err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
+				}
+				return result, err
+			}
+			log.Info("Successfully unmarshalled Docker config JSON.")
+
+			// Generate crane authenticator from Docker config JSON
+			auth, err := configFileToAuthenticator(dockerConfig, destinationRegistry)
+			if err != nil {
+				log.Error(err, "Failed to create authenticator for destination registry.")
+
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
+				}
+				return result, err
+			}
+
+			err = crane.Push(image, destinationImage, crane.WithAuth(auth))
+			if err != nil {
+				log.Error(err, "Failed to push image to destination registry.")
+
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
+				}
+				return result, err
+			}
+		}
+	} else {
+		if err := crane.Push(image, destinationImage); err != nil {
+			log.Error(err, "Failed to push image to destination registry.")
+
+			// Update status to reflect failure
+			craneImage.Status.State = "Failed"
+			craneImage.Status.Message = err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+			}
+			return result, err
+		}
+	}
+	log.Info("Successfully pushed image to destination registry.")
 
 	// Update status to reflect success
 	craneImage.Status.State = "Succeeded"
