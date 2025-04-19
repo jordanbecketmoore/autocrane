@@ -20,9 +20,12 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -66,6 +69,8 @@ type Clock interface {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.4/pkg/reconcile
 func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
+	var image v1.Image
+	var err error
 
 	// Define result with requeue after 1 minute
 	result := ctrl.Result{
@@ -121,6 +126,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	log.Info("Image not found in destination registry. Copying from source.")
 
+	// ################################### PULL ##########################################
 	// Pull the image from the source registry
 	log.Info("Pulling image from source registry.")
 
@@ -178,23 +184,38 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				return result, err
 			}
 			log.Info("Successfully unmarshalled Docker config JSON.")
-			for registry, authConfig := range dockerConfig.AuthConfigs {
-				// docker.io is represented as index.docker.io in the Docker config JSON
-				// so we replace it with docker.io
-				if registry == "index.docker.io" {
-					registry = "docker.io"
+
+			// Generate crane authenticator from Docker config JSON
+			auth, err := configFileToAuthenticator(dockerConfig, sourceRegistry)
+			if err != nil {
+				log.Error(err, "Failed to create authenticator for source registry.")
+
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
 				}
-				// Check if the registry in the Docker config JSON matches the source registry
-				if registry == sourceRegistry {
-					log.Info("Found matching registry in Docker config JSON.", "dockerRegistry", registry)
-					// TODO: Use the authConfig to authenticate with the source registry
-					// What is the most general auth object that we can produce here?
-				}
+				return result, err
 			}
+
+			image, err = crane.Pull(sourceImage, crane.WithAuth(auth))
+			if err != nil {
+				log.Error(err, "Failed to pull image from source registry.")
+
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
+				}
+				return result, err
+			}
+			log.Info("Successfully pulled image from source registry.")
 		} // TODO: block must either return or define image to continue
 
 	} else {
-		image, err := crane.Pull(sourceImage)
+		image, err = crane.Pull(sourceImage)
 		if err != nil {
 			log.Error(err, "Failed to pull image from source registry.")
 
@@ -206,7 +227,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 		}
 	}
-
+	// ################################### PUSH ##########################################
 	// Push the image to the destination registry
 	log.Info("Pushing image to destination registry.")
 	if err := crane.Push(image, destinationImage); err != nil {
@@ -244,4 +265,29 @@ func (r *CraneImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&imagev1beta1.CraneImage{}).
 		Named("craneimage").
 		Complete(r)
+}
+
+func configFileToAuthenticator(configFile configfile.ConfigFile, registry string) (authn.Authenticator, error) {
+	if registry == "docker.io" {
+		registry = "index.docker.io"
+	}
+	authConfig, err := configFile.GetAuthConfig(registry)
+	if err != nil {
+		return nil, err
+	}
+	// Create auth from username and password
+	if authConfig.Username != "" && authConfig.Password != "" {
+		return authn.FromConfig(authn.AuthConfig{
+			Username: authConfig.Username,
+			Password: authConfig.Password,
+		}), nil
+	}
+	// Create auth from token
+	if authConfig.Auth != "" {
+		return authn.FromConfig(authn.AuthConfig{
+			Auth: authConfig.Auth,
+		}), nil
+	}
+
+	return nil, fmt.Errorf("Unable to create authenticator for registry: %x", registry)
 }
