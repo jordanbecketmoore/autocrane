@@ -57,7 +57,7 @@ type Clock interface {
 // +kubebuilder:rbac:groups=image.autocrane.io,resources=craneimages,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=image.autocrane.io,resources=craneimages/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=image.autocrane.io,resources=craneimages/finalizers,verbs=update
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get,list
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
