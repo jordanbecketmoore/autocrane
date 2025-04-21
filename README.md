@@ -79,10 +79,33 @@ spec:
         tag: 1.21.6
 ```
 
-### CraneImageRule
-A CraneImageRule defines a set of CraneImage objects according to some matching
-rule. The CraneImageRule resource controller checks source registry for images
+### CraneImagePolicy
+A CraneImagePolicy defines a set of CraneImage objects according to some matching
+rule. The CraneImagePolicy resource controller checks source registry for images
 that match the rule and deploys CraneImage objects for each matching image.
+#### Tags
+##### Regex
+A CraneImagePolicy can match against image tags with a regex string. For example, if I wanted to generate CraneImages that matched DockerHub `ubuntu` images with tags that consisted of major and minor semantic versions, like `21.04`, `22.10`, `12.04`, I could create: 
+```
+apiVersion: image.autocrane.io/v1beta1
+kind: CraneImagePolicy
+metadata:
+  name: ubuntu-minor-versions
+spec:
+  source:
+    registry: docker.io
+  destination:
+    registry: my-private-registry.io
+  imagePolicy:
+    name: 
+      exact: ubuntu
+    tag: 
+      regex: "^[0-9]+\\.[0-9]+$"
+```
+(Kubernetes requires that we double-escape the middle dot in the regex expression.)
+
+This will generate CraneImage objects for all `ubuntu` images with tags that match the regex expression `^[0-9]+\.[0-9]+$`.
+
 
 #### Proposed Sync Rules
 - Prefix: Match an image by its address prefix.
