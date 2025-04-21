@@ -82,6 +82,28 @@ type CraneImagePolicyList struct {
 	Items           []CraneImagePolicy `json:"items"`
 }
 
+// CraneImagePolicy method to return CraneImage pointer from input name and tag
+func (c *CraneImagePolicy) GetCraneImageFromPolicy(name string, tag string) *CraneImage {
+	return &CraneImage{
+		Spec: CraneImageSpec{
+			Source: RegistryDetails{
+				Registry:          c.Spec.Source.Registry,
+				Prefix:            c.Spec.Source.Prefix,
+				CredentialsSecret: c.Spec.Source.CredentialsSecret,
+			},
+			Destination: RegistryDetails{
+				Registry:          c.Spec.Destination.Registry,
+				Prefix:            c.Spec.Destination.Prefix,
+				CredentialsSecret: c.Spec.Destination.CredentialsSecret,
+			},
+			Image: ImageDetails{
+				Name: name,
+				Tag:  tag,
+			},
+		},
+	}
+}
+
 func init() {
 	SchemeBuilder.Register(&CraneImagePolicy{}, &CraneImagePolicyList{})
 }
