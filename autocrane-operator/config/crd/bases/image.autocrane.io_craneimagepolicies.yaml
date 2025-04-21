@@ -46,6 +46,9 @@ spec:
                     description: CredentialsSecret is the name of the secret containing
                       credentials for the registry.
                     type: string
+                  prefix:
+                    description: Prefix is the prefix for the image in the registry.
+                    type: string
                   registry:
                     description: Registry is the URL of the container registry.
                     type: string
@@ -78,6 +81,9 @@ spec:
                   credentialsSecret:
                     description: CredentialsSecret is the name of the secret containing
                       credentials for the registry.
+                    type: string
+                  prefix:
+                    description: Prefix is the prefix for the image in the registry.
                     type: string
                   registry:
                     description: Registry is the URL of the container registry.
