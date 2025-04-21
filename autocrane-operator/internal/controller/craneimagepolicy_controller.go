@@ -67,6 +67,11 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// CraneImagePolicy function to return CraneImage pointer from input name and tag
 	constructCraneImageForCraneImagePolicy := func(c *imagev1beta1.CraneImagePolicy, name string, tag string) (*imagev1beta1.CraneImage, error) {
 		craneImage := &imagev1beta1.CraneImage{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels:      make(map[string]string),
+				Annotations: make(map[string]string),
+				Namespace:   c.Namespace,
+			},
 			Spec: imagev1beta1.CraneImageSpec{
 				Source: imagev1beta1.RegistryDetails{
 					Registry:          c.Spec.Source.Registry,
@@ -84,6 +89,10 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				},
 			},
 		}
+
+		// Create name
+		craneImage.ObjectMeta.Name = c.Name
+
 		if err := ctrl.SetControllerReference(c, craneImage, r.Scheme); err != nil {
 			return nil, err
 		}
