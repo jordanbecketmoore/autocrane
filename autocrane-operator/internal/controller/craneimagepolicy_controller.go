@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -91,7 +93,8 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 
 		// Create name
-		craneImage.ObjectMeta.Name = c.Name
+		hash := fmt.Sprintf("%x", sha256.Sum256([]byte(name+":"+tag)))
+		craneImage.ObjectMeta.Name = c.Name + "-" + hash[:7]
 
 		if err := ctrl.SetControllerReference(c, craneImage, r.Scheme); err != nil {
 			return nil, err
