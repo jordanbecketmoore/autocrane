@@ -55,6 +55,17 @@ func (rd *RegistryDetails) GetFullPrefix() string {
 	return rd.Registry + "/" + rd.Prefix + "/"
 }
 
+func (rd *RegistryDetails) GetRepository(imageName string) string {
+	if rd.Prefix == "" {
+		return imageName
+	}
+	return rd.Prefix + "/" + imageName
+}
+
+func (rd *RegistryDetails) GetFullImageName(imageName string) string {
+	return rd.Registry + "/" + rd.GetRepository(imageName)
+}
+
 // ImageDetails defines the details of the container image.
 type ImageDetails struct {
 	// Name is the name of the container image.

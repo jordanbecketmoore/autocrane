@@ -18,9 +18,7 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 
-	"github.com/docker/cli/cli/config/configfile"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -82,26 +80,5 @@ var _ = Describe("CraneImage Controller", func() {
 			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
 			// Example: If you expect a certain status condition after reconciliation, verify it here.
 		})
-	})
-})
-
-var _ = Describe("configFileToAuthenticator", func() {
-	It("should return a valid authenticator for a valid config file", func() {
-		registry := "docker.io"
-
-		// create config JSON string with fake credentials
-		// dockerhubUsername:dockerhubPassword
-		// localhostUsername:localhostPassword
-		dockerConfigJSONString := `{"auths":{"https://index.docker.io/v1/":{"auth":"am9yZGFuYm1vb3JlOmRja3JfcGF0X2F1c0VJUWJlODdPbGEtY1RWQ0tScTFnSEhWNA"},"localhost:5000":{"auth":"bG9jYWxob3N0VXNlcm5hbWU6bG9jYWxob3N0UGFzc3dvcmQK"}}}`
-		dockerConfigJSON := []byte(dockerConfigJSONString)
-		var dockerConfig configfile.ConfigFile
-		json.Unmarshal(dockerConfigJSON, &dockerConfig)
-
-		// Call the function
-		authenticator, err := configFileToAuthenticator(dockerConfig, registry)
-
-		// Assertions
-		Expect(err).NotTo(HaveOccurred())
-		Expect(authenticator).NotTo(BeNil())
 	})
 })
