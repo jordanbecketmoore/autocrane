@@ -148,6 +148,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 			return result, nil
 		}
+		upToDatChildCraneImage.ObjectMeta = childCraneImage.ObjectMeta
 		childCraneImages.Items[i] = *upToDatChildCraneImage
 		if err := r.Update(ctx, &childCraneImages.Items[i]); err != nil {
 			log.Error(err, "Failed to update child CraneImage object.")
