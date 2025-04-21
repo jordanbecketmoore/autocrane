@@ -39,7 +39,7 @@ type CraneImagePolicySpec struct {
 
 // ImagePolicyDetails defines the details of the image policy.
 type PolicyDetails struct {
-	Name NamePolicyDetails `json:"image,omitempty"`
+	Name NamePolicyDetails `json:"name,omitempty"`
 	Tag  TagPolicyDetails  `json:"tag,omitempty"`
 }
 
