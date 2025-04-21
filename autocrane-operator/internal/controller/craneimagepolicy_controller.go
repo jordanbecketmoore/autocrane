@@ -172,7 +172,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	sourceRepositories := []string{}
 
 	log.Info("Cataloging source registry.")
-	sourceRepositories, err := crane.Catalog(sourceRegistry, crane.WithAuth(sourceAuth))
+	sourceRepositories, err = crane.Catalog(sourceRegistry, crane.WithAuth(sourceAuth))
 	if err != nil {
 		log.Error(err, "Failed to catalog source registry.")
 		// Update status to reflect failure
