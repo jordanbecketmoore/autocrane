@@ -57,7 +57,7 @@ type TagPolicyDetails struct {
 type CraneImagePolicyStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Status  string `json:"status,omitempty"`
+	State   string `json:"state,omitempty"`
 	Message string `json:"message,omitempty"`
 }
 
