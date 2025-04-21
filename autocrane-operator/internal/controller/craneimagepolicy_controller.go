@@ -20,8 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/authn"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -63,7 +61,8 @@ var (
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.4/pkg/reconcile
 func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-	var err error
+	// TODO uncomment this line
+	// var err error
 
 	// CraneImagePolicy function to return CraneImage pointer from input name and tag
 	constructCraneImageForCraneImagePolicy := func(c *imagev1beta1.CraneImagePolicy, name string, tag string) (*imagev1beta1.CraneImage, error) {
@@ -122,48 +121,50 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Load source registry authenticator
 	log.Info("Loading source registry authenticator.")
-	var sourceAuth authn.Authenticator
-	if craneImagePolicy.Spec.Source.CredentialsSecret != "" {
-		log.Info("Using credentials secret for source registry.")
-		// Fetch the secret
-		var sourceRegistryCredentialsSecret corev1.Secret
-		sourceSecretName := client.ObjectKey{
-			Namespace: craneImagePolicy.Namespace,
-			Name:      craneImagePolicy.Spec.Source.CredentialsSecret,
-		}
-		if err := r.Get(ctx, sourceSecretName, &sourceRegistryCredentialsSecret); err != nil {
-			log.Error(err, "Failed to fetch credentials secret for source registry.")
-			// Update status to reflect failure
-			craneImagePolicy.Status.State = "Failed"
-			craneImagePolicy.Status.Message = "Failed to fetch credentials secret: " + err.Error()
-			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
-				log.Error(statusErr, "Failed to update CraneImage status.")
-				return ctrl.Result{}, statusErr
-			}
-			return result, nil
-		}
-		log.Info("Successfully fetched credentials secret for source registry.")
-		sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry, &log)
-		if err != nil {
-			log.Error(err, "Failed to create authenticator from credentials secret.")
-			// Update status to reflect failure
-			craneImagePolicy.Status.State = "Failed"
-			craneImagePolicy.Status.Message = "Failed to create authenticator from credentials secret: " + err.Error()
-			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
-				log.Error(statusErr, "Failed to update CraneImage status.")
-				return ctrl.Result{}, statusErr
-			}
-			return result, nil
-		}
-		log.Info("Successfully created authenticator from destination credentials secret.")
-	} else {
-		log.Info("No credentials secret provided for source registry.")
-		sourceAuth = authn.Anonymous
-	}
+	// TODO uncomment vvv
+	// var sourceAuth authn.Authenticator
+	// if craneImagePolicy.Spec.Source.CredentialsSecret != "" {
+	// 	log.Info("Using credentials secret for source registry.")
+	// 	// Fetch the secret
+	// 	var sourceRegistryCredentialsSecret corev1.Secret
+	// 	sourceSecretName := client.ObjectKey{
+	// 		Namespace: craneImagePolicy.Namespace,
+	// 		Name:      craneImagePolicy.Spec.Source.CredentialsSecret,
+	// 	}
+	// 	if err := r.Get(ctx, sourceSecretName, &sourceRegistryCredentialsSecret); err != nil {
+	// 		log.Error(err, "Failed to fetch credentials secret for source registry.")
+	// 		// Update status to reflect failure
+	// 		craneImagePolicy.Status.State = "Failed"
+	// 		craneImagePolicy.Status.Message = "Failed to fetch credentials secret: " + err.Error()
+	// 		if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+	// 			log.Error(statusErr, "Failed to update CraneImage status.")
+	// 			return ctrl.Result{}, statusErr
+	// 		}
+	// 		return result, nil
+	// 	}
+	// 	log.Info("Successfully fetched credentials secret for source registry.")
+	// 	sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry, &log)
+	// 	if err != nil {
+	// 		log.Error(err, "Failed to create authenticator from credentials secret.")
+	// 		// Update status to reflect failure
+	// 		craneImagePolicy.Status.State = "Failed"
+	// 		craneImagePolicy.Status.Message = "Failed to create authenticator from credentials secret: " + err.Error()
+	// 		if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+	// 			log.Error(statusErr, "Failed to update CraneImage status.")
+	// 			return ctrl.Result{}, statusErr
+	// 		}
+	// 		return result, nil
+	// 	}
+	// 	log.Info("Successfully created authenticator from destination credentials secret.")
+	// } else {
+	// 	log.Info("No credentials secret provided for source registry.")
+	// 	sourceAuth = authn.Anonymous
+	// }
 
 	// If image field has non-exact name policy,
 	// Catalog source registry to obtain a slice of repository names
 
+	// TODO uncomment block vvv
 	// if craneImagePolicy.Spec.ImagePolicy.Name.Regex != "" {
 	// 	log.Info("Cataloging source registry.")
 	// 	sourceRepositories, err := crane.Catalog(sourceRegistry, crane.WithAuth(sourceAuth))
