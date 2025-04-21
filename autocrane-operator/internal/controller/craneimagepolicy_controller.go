@@ -170,22 +170,21 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// Catalog source registry to obtain a slice of repository names
 
 	sourceRepositories := []string{}
-	if craneImagePolicy.Spec.ImagePolicy.Name.Regex != "" {
-		log.Info("Cataloging source registry.")
-		sourceRepositories, err := crane.Catalog(sourceRegistry, crane.WithAuth(sourceAuth))
-		if err != nil {
-			log.Error(err, "Failed to catalog source registry.")
-			// Update status to reflect failure
-			craneImagePolicy.Status.State = "Failed"
-			craneImagePolicy.Status.Message = "Failed to catalog source registry: " + err.Error()
-			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
-				log.Error(statusErr, "Failed to update CraneImage status.")
-				return ctrl.Result{}, statusErr
-			}
-			return result, nil
+
+	log.Info("Cataloging source registry.")
+	sourceRepositories, err := crane.Catalog(sourceRegistry, crane.WithAuth(sourceAuth))
+	if err != nil {
+		log.Error(err, "Failed to catalog source registry.")
+		// Update status to reflect failure
+		craneImagePolicy.Status.State = "Failed"
+		craneImagePolicy.Status.Message = "Failed to catalog source registry: " + err.Error()
+		if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+			log.Error(statusErr, "Failed to update CraneImage status.")
+			return ctrl.Result{}, statusErr
 		}
-		log.Info("Successfully cataloged source registry.", "repositories", sourceRepositories)
+		return result, nil
 	}
+	log.Info("Successfully cataloged source registry.", "repositories", sourceRepositories)
 
 	// Filter repositories based on policy details
 	// First by image name, then by tags on those images
