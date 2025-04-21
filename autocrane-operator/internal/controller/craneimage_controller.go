@@ -293,7 +293,7 @@ func (r *CraneImageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func configFileToAuthenticator(configFile configfile.ConfigFile, registry string) (authn.Authenticator, error) {
+func configFileToAuthenticator(configFile configfile.ConfigFile, registry string, log *logr.Logger) (authn.Authenticator, error) {
 	if registry == "docker.io" {
 		registry = "index.docker.io"
 	}
@@ -301,6 +301,7 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 	if err != nil {
 		return nil, err
 	}
+	log.Info("Loaded authConfig for %s: %s", registry, authConfig)
 	// Create auth from username and password
 	if authConfig.Username != "" && authConfig.Password != "" {
 		return authn.FromConfig(authn.AuthConfig{
@@ -315,7 +316,7 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 		}), nil
 	}
 
-	return nil, fmt.Errorf("unable to create authenticator for registry: %x", registry)
+	return nil, fmt.Errorf("unable to create authenticator for registry: %s", registry)
 }
 
 func secretToAuthenticator(secret *corev1.Secret, registry string, log *logr.Logger) (authn.Authenticator, error) {
@@ -331,7 +332,7 @@ func secretToAuthenticator(secret *corev1.Secret, registry string, log *logr.Log
 			return nil, err
 		}
 
-		return configFileToAuthenticator(dockerConfig, registry)
+		return configFileToAuthenticator(dockerConfig, registry, log)
 
 	}
 	// Check if the secret type is BasicAuth or has non-empty username and password
