@@ -57,23 +57,19 @@ spec:
                 description: PolicyDetails defines the policy details.
                 properties:
                   image:
-                    items:
-                      properties:
-                        exact:
-                          type: string
-                        regex:
-                          type: string
-                      type: object
-                    type: array
+                    properties:
+                      exact:
+                        type: string
+                      regex:
+                        type: string
+                    type: object
                   tag:
-                    items:
-                      properties:
-                        exact:
-                          type: string
-                        regex:
-                          type: string
-                      type: object
-                    type: array
+                    properties:
+                      exact:
+                        type: string
+                      regex:
+                        type: string
+                    type: object
                 type: object
               source:
                 description: RegistryDetails defines the details of a container registry.
@@ -92,6 +88,14 @@ spec:
             type: object
           status:
             description: CraneImagePolicyStatus defines the observed state of CraneImagePolicy.
+            properties:
+              message:
+                type: string
+              state:
+                description: |-
+                  INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+                  Important: Run "make" to regenerate code after modifying this file
+                type: string
             type: object
         type: object
     served: true
