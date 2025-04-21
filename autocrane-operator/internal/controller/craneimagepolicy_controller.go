@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -68,6 +70,48 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return result, err
 	}
 	return result, nil
+
+	// Load source registry authenticator
+	log.Info("Loading source registry authenticator.")
+	var sourceAuth authn.Authenticator
+	if craneImagePolicy.Spec.Source.CredentialsSecret != "" {
+		log.Info("Using credentials secret for source registry.")
+		// Fetch the secret
+		var sourceRegistryCredentialsSecret corev1.Secret
+		sourceSecretName := client.ObjectKey{
+			Namespace: craneImagePolicy.Namespace,
+			Name:      craneImagePolicy.Spec.Source.CredentialsSecret,
+		}
+		if err := r.Get(ctx, sourceSecretName, &sourceRegistryCredentialsSecret); err != nil {
+			log.Error(err, "Failed to fetch credentials secret for source registry.")
+			// Update status to reflect failure
+			craneImagePolicy.Status.State = "Failed"
+			craneImagePolicy.Status.Message = "Failed to fetch credentials secret: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+			return result, nil
+		}
+		log.Info("Successfully fetched credentials secret for source registry.")
+		sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry, &log)
+		if err != nil {
+			log.Error(err, "Failed to create authenticator from credentials secret.")
+			// Update status to reflect failure
+			craneImagePolicy.Status.State = "Failed"
+			craneImagePolicy.Status.Message = "Failed to create authenticator from credentials secret: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+			return result, nil
+		}
+		log.Info("Successfully created authenticator from destination credentials secret.")
+	} else {
+		log.Info("No credentials secret provided for source registry.")
+		sourceAuth = authn.Anonymous
+	}
+
 }
 
 // SetupWithManager sets up the controller with the Manager.
