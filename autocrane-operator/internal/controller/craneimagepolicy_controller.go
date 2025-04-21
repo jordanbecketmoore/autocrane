@@ -195,6 +195,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// First, add exact image name if specified.
 	imageExact := craneImagePolicy.Spec.ImagePolicy.Name.Exact
 	if imageExact != "" {
+		log.Info("Adding exact image name to imageTagPairs.", "imageName", imageExact)
 		imageTagPairs[imageExact] = []string{}
 	}
 
@@ -208,6 +209,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	imageTagExact := craneImagePolicy.Spec.ImagePolicy.Tag.Exact
 	if imageTagExact != "" {
 		for name, tags := range imageTagPairs {
+			log.Info("Adding exact image tag to imageTagPairs.", "imageName", name, "imageTag", imageTagExact)
 			tags = append(tags, imageTagExact)
 			imageTagPairs[name] = tags
 		}
@@ -221,6 +223,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Load child CraneImage objects
 	var childCraneImages imagev1beta1.CraneImageList
+	log.Info("Loading child CraneImage objects.")
 	if err := r.List(ctx, &childCraneImages, client.InNamespace(req.Namespace), client.MatchingFields{craneImageOwnerKey: req.Name}); err != nil {
 		log.Error(err, "Failed to list child CraneImage objects.")
 		return result, err
