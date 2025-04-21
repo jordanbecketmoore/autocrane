@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -208,7 +209,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// First by image name, then by tags on those images
 
 	// Define imageTagPairs object to hold image tag pairs to create CraneImage objects for
-	imageTagPairs := make(imageTagPairs)
+	policyImageTagPairs := make(imageTagPairs)
 
 	// ################################### NAME FILTERING ##########################################
 
@@ -218,8 +219,8 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if imageNameExact != "" {
 		log.Info("ImagePolicy contains exact image name.", "imageName", imageNameExact)
 		if _, err := crane.Head(craneImagePolicy.Spec.Source.GetFullImageName(imageNameExact), crane.WithAuth(sourceAuth)); err == nil {
-			log.Info("Adding exact image name to imageTagPairs.", "imageName", imageNameExact)
-			imageTagPairs[imageNameExact] = []string{}
+			log.Info("Adding exact image name to policyImageTagPairs.", "imageName", imageNameExact)
+			policyImageTagPairs[imageNameExact] = []string{}
 		} else {
 			log.Info("Exact image name not found in source registry.", "imageName", imageNameExact)
 			// Update status to reflect failure
@@ -261,14 +262,61 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// ################################### TAG FILTERING ##########################################
 
+	// Grab all existing image tag pairs from the source registry
+	log.Info("Loading image tag pairs from source registry.")
+	sourceImageTagPairs := make(imageTagPairs)
+
+	for image, _ := range policyImageTagPairs {
+		sourceImageTagPairs[image], err = crane.ListTags(craneImagePolicy.Spec.Source.GetFullImageName(image), crane.WithAuth(sourceAuth))
+		if err != nil {
+			log.Error(err, "Failed to list tags for image.", "imageName", image)
+			// Update status to reflect failure
+			craneImagePolicy.Status.State = "Failed"
+			craneImagePolicy.Status.Message = "Failed to list tags for image: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+			return result, nil
+		}
+	}
+
 	// First, add exact tags for images that match if specified
 	imageTagExact := craneImagePolicy.Spec.ImagePolicy.Tag.Exact
 	if imageTagExact != "" {
-		for name, tags := range imageTagPairs {
-			log.Info("Adding exact image tag to imageTagPairs.", "imageName", name, "imageTag", imageTagExact)
+		for name, tags := range policyImageTagPairs {
+			log.Info("Adding exact image tag to policyImageTagPairs.", "imageName", name, "imageTag", imageTagExact)
 			tags = append(tags, imageTagExact)
-			imageTagPairs[name] = tags
+			policyImageTagPairs[name] = tags
 		}
+	}
+
+	imageTagRegexString := craneImagePolicy.Spec.ImagePolicy.Tag.Regex
+	// TODO add logic to add regex '^' and '$' to regex string
+	if imageTagRegexString != "" {
+		log.Info("ImagePolicy contains regex image tag.", "regex", imageTagRegexString)
+		for image, tags := range sourceImageTagPairs {
+			matchingTags := []string{}
+			for _, tag := range tags {
+				match, err := regexp.Match(imageTagRegexString, []byte(tag))
+				if err != nil {
+					log.Error(err, "Error while attempting to match regexp.", "imageName", image, "regex", imageTagRegexString)
+					// Update status to reflect failure
+					craneImagePolicy.Status.State = "Failed"
+					craneImagePolicy.Status.Message = "Failed to match regex: " + err.Error()
+					if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+						log.Error(statusErr, "Failed to update CraneImage status.")
+						return ctrl.Result{}, statusErr
+					}
+				}
+				if match {
+					log.Info("Adding regex image tag to policyImageTagPairs.", "imageName", image, "imageTag", tag, "regex", imageTagRegexString)
+					matchingTags = append(matchingTags, tag)
+				}
+			}
+			policyImageTagPairs[image] = append(policyImageTagPairs[image], matchingTags...)
+		}
+
 	}
 
 	// TODO: Add regex support for image tags
@@ -279,7 +327,8 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Range over imageTagPairs and create CraneImage objects
 	// for each image,tag pair if it doesn't already exist
-	for name, tags := range imageTagPairs {
+	for name, tags := range policyImageTagPairs {
+		tags = removeDuplicates(tags)
 		for _, tag := range tags {
 			craneImageExists := false
 			for _, childCraneImage := range childCraneImages.Items {
@@ -367,4 +416,15 @@ func contains(slice []string, str string) bool {
 		}
 	}
 	return false
+}
+
+func removeDuplicates(strList []string) []string {
+	list := []string{}
+	for _, item := range strList {
+		fmt.Println(item)
+		if !contains(list, item) {
+			list = append(list, item)
+		}
+	}
+	return list
 }
