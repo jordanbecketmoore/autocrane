@@ -56,7 +56,7 @@ spec:
               imagePolicy:
                 description: PolicyDetails defines the policy details.
                 properties:
-                  image:
+                  name:
                     properties:
                       exact:
                         type: string
