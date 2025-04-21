@@ -39,11 +39,11 @@ type CraneImagePolicySpec struct {
 
 // ImagePolicyDetails defines the details of the image policy.
 type PolicyDetails struct {
-	Image []ImagePolicyDetails `json:"image,omitempty"`
-	Tag   []TagPolicyDetails   `json:"tag,omitempty"`
+	Name NamePolicyDetails `json:"image,omitempty"`
+	Tag  TagPolicyDetails  `json:"tag,omitempty"`
 }
 
-type ImagePolicyDetails struct {
+type NamePolicyDetails struct {
 	Regex string `json:"regex,omitempty"`
 	Exact string `json:"exact,omitempty"`
 }
