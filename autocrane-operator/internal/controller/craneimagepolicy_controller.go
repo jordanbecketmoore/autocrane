@@ -125,6 +125,43 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		"destinationPrefix", destinationPrefix,
 	)
 
+	// Load child CraneImage objects
+	var childCraneImages imagev1beta1.CraneImageList
+	log.Info("Loading child CraneImage objects.")
+	if err := r.List(ctx, &childCraneImages, client.InNamespace(req.Namespace), client.MatchingFields{craneImageOwnerKey: req.Name}); err != nil {
+		log.Error(err, "Failed to list child CraneImage objects.")
+		return result, err
+	}
+	// Make sure all child objects are up to date on uniform data
+	for i, childCraneImage := range childCraneImages.Items {
+		childCraneImageName := childCraneImage.Spec.Image.Name
+		childCraneImageTag := childCraneImage.Spec.Image.Tag
+		upToDatChildCraneImage, err := constructCraneImageForCraneImagePolicy(&craneImagePolicy, childCraneImageName, childCraneImageTag)
+		if err != nil {
+			log.Error(err, "Failed to create up-to-date child CraneImage object.")
+			// Update status to reflect failure
+			craneImagePolicy.Status.State = "Failed"
+			craneImagePolicy.Status.Message = "Failed to create up-to-date child CraneImage object: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+			return result, nil
+		}
+		childCraneImages.Items[i] = *upToDatChildCraneImage
+		if err := r.Update(ctx, &childCraneImages.Items[i]); err != nil {
+			log.Error(err, "Failed to update child CraneImage object.")
+			// Update status to reflect failure
+			craneImagePolicy.Status.State = "Failed"
+			craneImagePolicy.Status.Message = "Failed to update child CraneImage object: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+			return result, nil
+		}
+	}
+
 	// Load source registry authenticator
 	log.Info("Loading source registry authenticator.")
 	var sourceAuth authn.Authenticator
@@ -238,14 +275,6 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// then add to imageTagPair values
 
 	// ################################### CraneImage Provisioning ##########################################
-
-	// Load child CraneImage objects
-	var childCraneImages imagev1beta1.CraneImageList
-	log.Info("Loading child CraneImage objects.")
-	if err := r.List(ctx, &childCraneImages, client.InNamespace(req.Namespace), client.MatchingFields{craneImageOwnerKey: req.Name}); err != nil {
-		log.Error(err, "Failed to list child CraneImage objects.")
-		return result, err
-	}
 
 	// Range over imageTagPairs and create CraneImage objects
 	// for each image,tag pair if it doesn't already exist
