@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/image.autocrane.io_craneimages.yaml
+- bases/image.autocrane.io_craneimagepolicies.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

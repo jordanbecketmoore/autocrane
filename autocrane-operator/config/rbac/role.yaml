@@ -15,6 +15,7 @@ rules:
 - apiGroups:
   - image.autocrane.io
   resources:
+  - craneimagepolicies
   - craneimages
   verbs:
   - create
@@ -27,12 +28,14 @@ rules:
 - apiGroups:
   - image.autocrane.io
   resources:
+  - craneimagepolicies/finalizers
   - craneimages/finalizers
   verbs:
   - update
 - apiGroups:
   - image.autocrane.io
   resources:
+  - craneimagepolicies/status
   - craneimages/status
   verbs:
   - get
