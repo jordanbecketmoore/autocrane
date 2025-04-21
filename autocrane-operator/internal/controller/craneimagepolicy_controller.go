@@ -233,12 +233,17 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// for each image,tag pair if it doesn't already exist
 	for name, tags := range imageTagPairs {
 		for _, tag := range tags {
+			craneImageExists := false
 			for _, childCraneImage := range childCraneImages.Items {
 				if childCraneImage.Spec.Image.Name == name && childCraneImage.Spec.Image.Tag == tag {
 					log.Info("Child CraneImage object already exists.", "imageName", name, "imageTag", tag)
 					// Break back to tags loop
+					craneImageExists = true
 					break
 				}
+			}
+
+			if !craneImageExists {
 				// Create a new CraneImage object (pointer)
 				newCraneImage, err := constructCraneImageForCraneImagePolicy(&craneImagePolicy, name, tag)
 				if err != nil {
@@ -264,6 +269,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					return result, nil
 				}
 				log.Info("Successfully created new CraneImage object.", "imageName", name, "imageTag", tag, "craneImage", newCraneImage)
+
 			}
 		}
 	}
