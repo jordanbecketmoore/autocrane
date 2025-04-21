@@ -166,26 +166,6 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		sourceAuth = authn.Anonymous
 	}
 
-	// If image field has non-exact name policy,
-	// Catalog source registry to obtain a slice of repository names
-
-	sourceRepositories := []string{}
-
-	log.Info("Cataloging source registry.")
-	sourceRepositories, err = crane.Catalog(sourceRegistry, crane.WithAuth(sourceAuth))
-	if err != nil {
-		log.Error(err, "Failed to catalog source registry.")
-		// Update status to reflect failure
-		craneImagePolicy.Status.State = "Failed"
-		craneImagePolicy.Status.Message = "Failed to catalog source registry: " + err.Error()
-		if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
-			log.Error(statusErr, "Failed to update CraneImage status.")
-			return ctrl.Result{}, statusErr
-		}
-		return result, nil
-	}
-	log.Info("Successfully cataloged source registry.", "repositories", sourceRepositories)
-
 	// Filter repositories based on policy details
 	// First by image name, then by tags on those images
 
@@ -196,10 +176,10 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// First, add exact image name if specified.
 	imageNameExact := craneImagePolicy.Spec.ImagePolicy.Name.Exact
-	// Check that imageExact is not empty and that it is in the sourceRepositories slice
+	// Check that imageExact is not empty and that it is in the source registry
 	if imageNameExact != "" {
 		log.Info("ImagePolicy contains exact image name.", "imageName", imageNameExact)
-		if contains(sourceRepositories, craneImagePolicy.Spec.Source.GetRepository(imageNameExact)) {
+		if _, err := crane.Head(craneImagePolicy.Spec.Source.GetFullImageName(imageNameExact), crane.WithAuth(sourceAuth)); err == nil {
 			log.Info("Adding exact image name to imageTagPairs.", "imageName", imageNameExact)
 			imageTagPairs[imageNameExact] = []string{}
 		} else {
@@ -213,6 +193,28 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 			return result, nil
 		}
+	}
+
+	// If image field has non-exact name policy,
+	// Catalog source registry to obtain a slice of repository names
+
+	if craneImagePolicy.Spec.ImagePolicy.Name.Regex != "" {
+		sourceRepositories := []string{}
+
+		log.Info("Cataloging source registry.")
+		sourceRepositories, err = crane.Catalog(sourceRegistry, crane.WithAuth(sourceAuth))
+		if err != nil {
+			log.Error(err, "Failed to catalog source registry.")
+			// Update status to reflect failure
+			craneImagePolicy.Status.State = "Failed"
+			craneImagePolicy.Status.Message = "Failed to catalog source registry: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+			return result, nil
+		}
+		log.Info("Successfully cataloged source registry.", "repositories", sourceRepositories)
 	}
 
 	// TODO: Add regex support for image name
