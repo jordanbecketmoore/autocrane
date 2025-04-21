@@ -75,16 +75,8 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				Namespace:   c.Namespace,
 			},
 			Spec: imagev1beta1.CraneImageSpec{
-				Source: imagev1beta1.RegistryDetails{
-					Registry:          c.Spec.Source.Registry,
-					Prefix:            c.Spec.Source.Prefix,
-					CredentialsSecret: c.Spec.Source.CredentialsSecret,
-				},
-				Destination: imagev1beta1.RegistryDetails{
-					Registry:          c.Spec.Destination.Registry,
-					Prefix:            c.Spec.Destination.Prefix,
-					CredentialsSecret: c.Spec.Destination.CredentialsSecret,
-				},
+				Source:      c.Spec.Source,
+				Destination: c.Spec.Destination,
 				Image: imagev1beta1.ImageDetails{
 					Name: name,
 					Tag:  tag,
