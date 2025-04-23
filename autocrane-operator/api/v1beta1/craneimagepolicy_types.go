@@ -49,8 +49,9 @@ type NamePolicyDetails struct {
 }
 
 type TagPolicyDetails struct {
-	Regex string `json:"regex,omitempty"`
-	Exact string `json:"exact,omitempty"`
+	Regex  string `json:"regex,omitempty"`
+	Exact  string `json:"exact,omitempty"`
+	Semver string `json:"semver,omitempty"`
 }
 
 // CraneImagePolicyStatus defines the observed state of CraneImagePolicy.

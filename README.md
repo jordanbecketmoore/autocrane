@@ -109,6 +109,5 @@ This will generate CraneImage objects for all `ubuntu` images with tags that mat
 
 #### Proposed Sync Rules
 - Prefix: Match an image by its address prefix.
-- RegEx: Match an image using a regular expression.
 - SemVer: Match an image based on its tag according to a semantic version constraint.
 - CalVer: Match an image based on its tag according to a calendar version constraint.

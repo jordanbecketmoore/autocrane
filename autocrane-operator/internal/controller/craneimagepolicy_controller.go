@@ -33,6 +33,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	imagev1beta1 "autocrane.io/api/v1beta1"
+	semver "github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -319,9 +320,38 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	}
 
-	// TODO: Add regex support for image tags
-	// Check all repositories for regex-matching tags
-	// then add to imageTagPair values
+	imageTagSemverString := craneImagePolicy.Spec.ImagePolicy.Tag.Semver
+	if imageTagSemverString != "" {
+		log.Info("ImagePolicy contains semver constraint.", "semver", imageTagSemverString)
+
+		imageTagSemverConstraint, err := semver.NewConstraint(imageTagSemverString)
+		if err != nil {
+			log.Error(err, "Failed to parse semver constraint.", "semver", imageTagSemverString) // Update status to reflect failure
+			craneImagePolicy.Status.State = "Failed"
+			craneImagePolicy.Status.Message = "Failed to parse semver constraint: " + err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+
+		}
+		for image, tags := range sourceImageTagPairs {
+			matchingTags := []string{}
+			for _, tag := range tags {
+				tagVersion, err := semver.NewVersion(tag)
+				// ignore tags that do not parse as semvers
+				if err != nil {
+					continue
+				}
+				if imageTagSemverConstraint.Check(tagVersion) {
+					log.Info("Image tag matches semver constraint.", "imageName", image, "imageTag", tag, "semver", imageTagSemverString)
+					matchingTags = append(matchingTags, tag)
+				}
+
+			}
+			policyImageTagPairs[image] = matchingTags
+		}
+	}
 
 	// ################################### CraneImage Provisioning ##########################################
 
