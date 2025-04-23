@@ -69,6 +69,8 @@ spec:
                         type: string
                       regex:
                         type: string
+                      semver:
+                        type: string
                     type: object
                 type: object
               source:
