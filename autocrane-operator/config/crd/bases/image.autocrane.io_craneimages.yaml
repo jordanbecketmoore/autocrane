@@ -63,6 +63,21 @@ spec:
                     description: Tag is the tag of the container image.
                     type: string
                 type: object
+              passthroughCache:
+                description: PassthroughCache defiens a passthrough cache registry
+                  for pulling source images.
+                properties:
+                  credentialsSecret:
+                    description: CredentialsSecret is the name of the secret containing
+                      credentials for the registry.
+                    type: string
+                  prefix:
+                    description: Prefix is the prefix for the image in the registry.
+                    type: string
+                  registry:
+                    description: Registry is the URL of the container registry.
+                    type: string
+                type: object
               source:
                 description: Source defines the source registry details.
                 properties:
