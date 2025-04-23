@@ -45,9 +45,6 @@ type RegistryDetails struct {
 
 	// Prefix is the prefix for the image in the registry.
 	Prefix string `json:"prefix,omitempty"`
-
-	// PassthroughCache is the passthrough cache for the registry.
-	PassthroughCache string `json:"passthroughCache,omitempty"`
 }
 
 // GetFullPrefix returns the full prefix for the registry, including the tailing slash.
@@ -67,13 +64,6 @@ func (rd *RegistryDetails) GetRepository(imageName string) string {
 
 func (rd *RegistryDetails) GetFullImageName(imageName string) string {
 	return rd.Registry + "/" + rd.GetRepository(imageName)
-}
-
-func (rd *RegistryDetails) GetFullPassthroughImageName(imageName, tag string) string {
-	if rd.PassthroughCache == "" {
-		return rd.GetFullImageName(imageName)
-	}
-	return rd.PassthroughCache + "/" + rd.GetRepository(imageName)
 }
 
 // ImageDetails defines the details of the container image.
