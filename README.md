@@ -84,7 +84,34 @@ A CraneImagePolicy defines a set of CraneImage objects according to some matchin
 rule. The CraneImagePolicy resource controller checks source registry for images
 that match the rule and deploys CraneImage objects for each matching image.
 #### Tags
-##### Regex
+##### Semantic Version Constraints (semver)
+A `CranImagePolicy` can match against image tags that conform to a semantic version constraint. Autocrane utilizes the 
+[Masterminds/semver](https://github.com/Masterminds/semver) package to evaluate
+image tags as semantic versions (where applicable) and check them against a
+constraint provided in `spec.imagePolicy.tag.semver`. 
+
+For example, the `CraneImagePolicy` defined here, 
+
+```
+apiVersion: image.autocrane.io/v1beta1
+kind: CraneImagePolicy
+metadata:
+  name: ubuntu-semantic-version
+spec:
+  source:
+    registry: docker.io
+  destination:
+    registry: my-private-registry.io
+  imagePolicy:
+    name: 
+      exact: ubuntu
+    tag: 
+      semver: ">=20.0.0"
+```
+
+will match all ubuntu images that have semantic versions greater than 20.0.0. 
+
+##### Regular Expressions (regex)
 A CraneImagePolicy can match against image tags with a regex string. For example, if I wanted to generate CraneImages that matched DockerHub `ubuntu` images with tags that consisted of major and minor semantic versions, like `21.04`, `22.10`, `12.04`, I could create: 
 ```
 apiVersion: image.autocrane.io/v1beta1
@@ -109,5 +136,4 @@ This will generate CraneImage objects for all `ubuntu` images with tags that mat
 
 #### Proposed Sync Rules
 - Prefix: Match an image by its address prefix.
-- SemVer: Match an image based on its tag according to a semantic version constraint.
 - CalVer: Match an image based on its tag according to a calendar version constraint.
