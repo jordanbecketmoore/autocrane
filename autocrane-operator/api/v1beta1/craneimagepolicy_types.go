@@ -33,6 +33,9 @@ type CraneImagePolicySpec struct {
 	// Destination defines the destination registry details.
 	Destination RegistryDetails `json:"destination,omitempty"`
 
+	// PassthroughCache defiens a passthrough cache registry for pulling source images.
+	PassthroughCache RegistryDetails `json:"passthroughCache,omitempty"`
+
 	// PolicyDetails defines the policy details.
 	ImagePolicy PolicyDetails `json:"imagePolicy,omitempty"`
 }
