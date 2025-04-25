@@ -258,11 +258,9 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		log.Info("Successfully cataloged source registry.", "repositories", sourceRepositories)
 	}
 
-	// TODO: Add regex support for image name
-	// Check all repositories for regex match
-	// then add to imageTagPairs keys
-
 	// ################################### TAG FILTERING ##########################################
+
+	log.Info("Image pairs collected.", "imageNameTags", policyImageTagPairs)
 
 	// Grab all existing image tag pairs from the source registry
 	log.Info("Loading image tag pairs from source registry.")
