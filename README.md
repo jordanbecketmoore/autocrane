@@ -199,6 +199,7 @@ This will generate CraneImage objects for all `ubuntu` images with tags that mat
 ## Features
 - Loading registry credentials in Kubernetes on major cloud providers. 
 - Public autocrane image metrics
+- Cosign image signature verification on `CraneImage` objects
 
 ## Proposed Sync Rules
 - CalVer: Match an image based on its tag according to a calendar version constraint.
