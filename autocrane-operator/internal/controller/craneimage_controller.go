@@ -364,7 +364,7 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Loaded authConfig for %s: %s", registry, authConfig)
+	log.Info(fmt.Sprintf("Loaded authConfig for %s", registry))
 	// Create auth from username and password
 	if authConfig.Username != "" && authConfig.Password != "" {
 		return authn.FromConfig(authn.AuthConfig{
