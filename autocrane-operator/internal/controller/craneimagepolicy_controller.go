@@ -354,6 +354,8 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}
 
+	log.Info("Final image tag pairs.", "imageTagPairs", policyImageTagPairs)
+
 	// ################################### CraneImage Provisioning ##########################################
 
 	// Range over imageTagPairs and create CraneImage objects
