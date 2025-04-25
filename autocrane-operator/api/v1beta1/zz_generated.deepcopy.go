@@ -147,6 +147,7 @@ func (in *CraneImagePolicySpec) DeepCopyInto(out *CraneImagePolicySpec) {
 	*out = *in
 	out.Source = in.Source
 	out.Destination = in.Destination
+	out.PassthroughCache = in.PassthroughCache
 	out.ImagePolicy = in.ImagePolicy
 }
 
@@ -180,6 +181,7 @@ func (in *CraneImageSpec) DeepCopyInto(out *CraneImageSpec) {
 	*out = *in
 	out.Source = in.Source
 	out.Destination = in.Destination
+	out.PassthroughCache = in.PassthroughCache
 	out.Image = in.Image
 }
 

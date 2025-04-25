@@ -79,8 +79,9 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				Namespace:   c.Namespace,
 			},
 			Spec: imagev1beta1.CraneImageSpec{
-				Source:      c.Spec.Source,
-				Destination: c.Spec.Destination,
+				Source:           c.Spec.Source,
+				Destination:      c.Spec.Destination,
+				PassthroughCache: c.Spec.PassthroughCache,
 				Image: imagev1beta1.ImageDetails{
 					Name: name,
 					Tag:  tag,
@@ -352,6 +353,8 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			policyImageTagPairs[image] = matchingTags
 		}
 	}
+
+	log.Info("Final image tag pairs.", "imageTagPairs", policyImageTagPairs)
 
 	// ################################### CraneImage Provisioning ##########################################
 

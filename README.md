@@ -78,6 +78,65 @@ spec:
         name: nginx
         tag: 1.21.6
 ```
+#### Passthrough Cache
+If you wish to route your image pull through a passthrough cache, you can specify the it under the `spec.passthroughCache`. For instance,
+```
+apiVersion: image.autocrane.io/v1beta1
+kind: CraneImage
+spec: 
+    source: 
+        registry: docker.io
+    destination: 
+        registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+        credentialsSecret: ecr-creds
+    passthroughCache: 
+        registry: my-passthrough-cache.com:5001
+    image: 
+        name: nginx
+        tag: 1.21.6
+```
+will pull `my-passthrough-cache.com:5001/nginx:1.21.6`. 
+
+You can specify a passthrough cache image prefix just as you can with source and destination. For instance,
+```
+apiVersion: image.autocrane.io/v1beta1
+kind: CraneImage
+spec: 
+    source: 
+        registry: docker.io
+    destination: 
+        registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+        credentialsSecret: ecr-creds
+    passthroughCache: 
+        registry: my-passthrough-cache.com:5001
+        prefix: docker.io
+    image: 
+        name: nginx
+        tag: 1.21.6
+```
+will pull `my-passthrough-cache.com:5001/docker.io/nginx:1.21.6`.
+
+You can also specify the passthrough cache in a `CraneImagePolicy`, 
+```
+apiVersion: image.autocrane.io/v1beta1
+kind: CraneImagePolicy
+spec: 
+    source: 
+        registry: docker.io
+    destination: 
+        registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+        credentialsSecret: ecr-creds
+    passthroughCache: 
+        registry: my-passthrough-cache.com:5001
+        prefix: docker.io
+    imagePolicy: 
+        name: 
+            exact: nginx
+        tag: 
+            semver: ">=1.21.6"
+```
+*Note: The autocrane operator must have network access to the source registry in
+order to get the list of image names and tags to apply an image policy.* 
 
 ### CraneImagePolicy
 A CraneImagePolicy defines a set of CraneImage objects according to some matching
@@ -134,6 +193,16 @@ spec:
 This will generate CraneImage objects for all `ubuntu` images with tags that match the regex expression `^[0-9]+\.[0-9]+$`.
 
 
-#### Proposed Sync Rules
-- Prefix: Match an image by its address prefix.
+
+# TODOs 
+
+## Features
+- Loading registry credentials in Kubernetes on major cloud providers. 
+- Public autocrane image metrics
+
+## Proposed Sync Rules
 - CalVer: Match an image based on its tag according to a calendar version constraint.
+
+## QOL
+- New documentation
+- Cleaner statuses

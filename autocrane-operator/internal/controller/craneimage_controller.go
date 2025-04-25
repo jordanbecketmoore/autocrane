@@ -234,23 +234,86 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	log.Info("Image not found in destination registry. Copying from source.")
 
 	// ################################### PULL ##########################################
-	// Pull the image from the source registry
-	log.Info("Pulling image from source registry.")
 
-	image, err = crane.Pull(sourceImage, crane.WithAuth(sourceAuth))
-	if err != nil {
-		log.Error(err, "Failed to pull image from source registry.")
+	// If no passthrough cache, pull the image from the source registry
+	if craneImage.Spec.PassthroughCache.Registry == "" {
+		log.Info("Pulling image from source registry.")
 
-		// Update status to reflect failure
-		craneImage.Status.State = "Failed"
-		craneImage.Status.Message = err.Error()
-		if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
-			log.Error(statusErr, "Failed to update CraneImage status.")
-			return ctrl.Result{}, statusErr
+		image, err = crane.Pull(sourceImage, crane.WithAuth(sourceAuth))
+		if err != nil {
+			log.Error(err, "Failed to pull image from source registry.")
+
+			// Update status to reflect failure
+			craneImage.Status.State = "Failed"
+			craneImage.Status.Message = err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+			return result, nil
 		}
-		return result, nil
+		log.Info("Successfully pulled image from source registry.")
+	} else {
+		// If passthrough cache, pull the image from the passthrough cache
+		log.Info("Pulling image from passthrough cache registry.")
+		passthroughCacheImage := craneImage.Spec.PassthroughCache.GetFullImageName(imageName) + ":" + imageTag
+		passthroughCacheRegistry := craneImage.Spec.PassthroughCache.Registry
+		// TODO add authenticator for passthrough cache
+		// Load source registry authenticator
+		log.Info("Loading source registry authenticator.")
+		var passthroughCacheAuth authn.Authenticator
+		if craneImage.Spec.PassthroughCache.CredentialsSecret != "" {
+			log.Info("Using credentials secret for source registry.")
+			// Fetch the secret
+			var passthroughCacheRegistryCredentialsSecret corev1.Secret
+			passthroughCacheSecretName := client.ObjectKey{
+				Namespace: craneImage.Namespace,
+				Name:      craneImage.Spec.PassthroughCache.CredentialsSecret,
+			}
+			if err := r.Get(ctx, passthroughCacheSecretName, &passthroughCacheRegistryCredentialsSecret); err != nil {
+				log.Error(err, "Failed to fetch credentials secret for passthrough cache registry.")
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = "Failed to fetch credentials secret: " + err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
+					return ctrl.Result{}, statusErr
+				}
+				return result, nil
+			}
+			log.Info("Successfully fetched credentials secret for source registry.")
+			passthroughCacheAuth, err = secretToAuthenticator(&passthroughCacheRegistryCredentialsSecret, passthroughCacheRegistry, &log)
+			if err != nil {
+				log.Error(err, "Failed to create authenticator from credentials secret.")
+				// Update status to reflect failure
+				craneImage.Status.State = "Failed"
+				craneImage.Status.Message = "Failed to create authenticator from credentials secret: " + err.Error()
+				if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+					log.Error(statusErr, "Failed to update CraneImage status.")
+					return ctrl.Result{}, statusErr
+				}
+				return result, nil
+			}
+			log.Info("Successfully created authenticator from passthrough cache credentials secret.")
+		} else {
+			log.Info("No credentials secret provided for passthrough cache registry.")
+			passthroughCacheAuth = authn.Anonymous
+		}
+		image, err = crane.Pull(passthroughCacheImage, crane.WithAuth(passthroughCacheAuth))
+		if err != nil {
+			log.Error(err, "Failed to pull image from passthrough cache registry.")
+
+			// Update status to reflect failure
+			craneImage.Status.State = "Failed"
+			craneImage.Status.Message = err.Error()
+			if statusErr := r.Status().Update(ctx, &craneImage); statusErr != nil {
+				log.Error(statusErr, "Failed to update CraneImage status.")
+				return ctrl.Result{}, statusErr
+			}
+			return result, nil
+		}
+		log.Info("Successfully pulled image from passthrough cache registry.")
 	}
-	log.Info("Successfully pulled image from source registry.")
 
 	// ################################### PUSH ##########################################
 	// Push the image to the destination registry
@@ -301,7 +364,7 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Loaded authConfig for %s: %s", registry, authConfig)
+	log.Info(fmt.Sprintf("Loaded authConfig for %s", registry))
 	// Create auth from username and password
 	if authConfig.Username != "" && authConfig.Password != "" {
 		return authn.FromConfig(authn.AuthConfig{
