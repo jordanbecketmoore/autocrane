@@ -415,6 +415,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	} else {
 		craneImagePolicy.Status.Message = fmt.Sprintf("%d child CraneImage objects found.", childCraneImageCount)
 	}
+	log.V(1).Info("Updating status.", "status", craneImagePolicy.Status)
 	if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
 		log.Error(statusErr, "Failed to update CraneImage status.")
 		return ctrl.Result{}, statusErr
