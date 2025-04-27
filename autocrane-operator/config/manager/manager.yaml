@@ -57,6 +57,7 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      imagePullPolicy: Always
       imagePullSecrets:
         - name: dockerhub
       containers:
