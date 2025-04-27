@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "chart.fullname" . }}-craneimage-viewer-role
+  labels:
+  {{- include "chart.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - image.autocrane.io
+  resources:
+  - craneimages
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - image.autocrane.io
+  resources:
+  - craneimages/status
+  verbs:
+  - get
