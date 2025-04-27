@@ -57,7 +57,6 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
-      imagePullPolicy: Always
       imagePullSecrets:
         - name: dockerhub
       containers:
@@ -69,6 +68,7 @@ spec:
         image: controller:latest
         name: manager
         ports: []
+        imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
