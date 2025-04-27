@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: jordanbmoore/autocrane
-  newTag: logging
+  newTag: latest
