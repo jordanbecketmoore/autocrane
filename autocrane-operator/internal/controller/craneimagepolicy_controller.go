@@ -109,7 +109,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	var craneImagePolicy imagev1beta1.CraneImagePolicy
 	if err := r.Get(ctx, req.NamespacedName, &craneImagePolicy); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("CraneImagePolicy resource not found. Ignoring since object must be deleted.")
+			log.V(1).Info("CraneImagePolicy resource not found. Ignoring since object must be deleted.")
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get CraneImagePolicy resource.")
@@ -130,7 +130,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Load child CraneImage objects
 	var childCraneImages imagev1beta1.CraneImageList
-	log.Info("Loading child CraneImage objects.")
+	log.V(1).Info("Loading child CraneImage objects.")
 	if err := r.List(ctx, &childCraneImages, client.InNamespace(req.Namespace), client.MatchingFields{craneImageOwnerKey: req.Name}); err != nil {
 		log.Error(err, "Failed to list child CraneImage objects.")
 		return result, err
@@ -167,10 +167,10 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// Load source registry authenticator
-	log.Info("Loading source registry authenticator.")
+	log.V(1).Info("Loading source registry authenticator.")
 	var sourceAuth authn.Authenticator
 	if craneImagePolicy.Spec.Source.CredentialsSecret != "" {
-		log.Info("Using credentials secret for source registry.")
+		log.V(1).Info("Using credentials secret for source registry.")
 		// Fetch the secret
 		var sourceRegistryCredentialsSecret corev1.Secret
 		sourceSecretName := client.ObjectKey{
@@ -188,7 +188,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 			return result, nil
 		}
-		log.Info("Successfully fetched credentials secret for source registry.")
+		log.V(1).Info("Successfully fetched credentials secret for source registry.")
 		sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry, &log)
 		if err != nil {
 			log.Error(err, "Failed to create authenticator from credentials secret.")
@@ -201,9 +201,9 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 			return result, nil
 		}
-		log.Info("Successfully created authenticator from destination credentials secret.")
+		log.V(1).Info("Successfully created authenticator from destination credentials secret.")
 	} else {
-		log.Info("No credentials secret provided for source registry.")
+		log.V(1).Info("No credentials secret provided for source registry.")
 		sourceAuth = authn.Anonymous
 	}
 
@@ -221,7 +221,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if imageNameExact != "" {
 		log.Info("ImagePolicy contains exact image name.", "imageName", imageNameExact)
 		if _, err := crane.Head(craneImagePolicy.Spec.Source.GetFullImageName(imageNameExact), crane.WithAuth(sourceAuth)); err == nil {
-			log.Info("Adding exact image name to policyImageTagPairs.", "imageName", imageNameExact)
+			log.V(1).Info("Adding exact image name to policyImageTagPairs.", "imageName", imageNameExact)
 			policyImageTagPairs[imageNameExact] = []string{}
 		} else {
 			log.Info("Exact image name not found in source registry.", "imageName", imageNameExact)
@@ -242,7 +242,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if craneImagePolicy.Spec.ImagePolicy.Name.Regex != "" {
 		sourceRepositories := []string{}
 
-		log.Info("Cataloging source registry.")
+		log.V(1).Info("Cataloging source registry.")
 		sourceRepositories, err = crane.Catalog(sourceRegistry, crane.WithAuth(sourceAuth))
 		if err != nil {
 			log.Error(err, "Failed to catalog source registry.")
@@ -255,7 +255,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 			return result, nil
 		}
-		log.Info("Successfully cataloged source registry.", "repositories", sourceRepositories)
+		log.V(1).Info("Successfully cataloged source registry.", "repositories", sourceRepositories)
 	}
 
 	// ################################### TAG FILTERING ##########################################
@@ -263,7 +263,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	log.Info("Image pairs collected.", "imageNameTags", policyImageTagPairs)
 
 	// Grab all existing image tag pairs from the source registry
-	log.Info("Loading image tag pairs from source registry.")
+	log.V(1).Info("Loading image tag pairs from source registry.")
 	sourceImageTagPairs := make(imageTagPairs)
 
 	for image, _ := range policyImageTagPairs {
@@ -343,7 +343,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					continue
 				}
 				if imageTagSemverConstraint.Check(tagVersion) {
-					log.Info("Image tag matches semver constraint.", "imageName", image, "imageTag", tag, "semver", imageTagSemverString)
+					log.V(1).Info("Image tag matches semver constraint.", "imageName", image, "imageTag", tag, "semver", imageTagSemverString)
 					matchingTags = append(matchingTags, tag)
 				}
 
@@ -364,7 +364,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			craneImageExists := false
 			for _, childCraneImage := range childCraneImages.Items {
 				if childCraneImage.Spec.Image.Name == name && childCraneImage.Spec.Image.Tag == tag {
-					log.Info("Child CraneImage object already exists.", "imageName", name, "imageTag", tag)
+					log.V(1).Info("Child CraneImage object already exists.", "imageName", name, "imageTag", tag)
 					// Break back to tags loop
 					craneImageExists = true
 					break
@@ -396,7 +396,7 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					}
 					return result, nil
 				}
-				log.Info("Successfully created new CraneImage object.", "imageName", name, "imageTag", tag, "craneImage", newCraneImage)
+				log.V(1).Info("Successfully created new CraneImage object.", "imageName", name, "imageTag", tag, "craneImage", newCraneImage)
 
 			}
 		}

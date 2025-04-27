@@ -81,7 +81,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	var craneImage imagev1beta1.CraneImage
 	if err := r.Get(ctx, req.NamespacedName, &craneImage); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("CraneImage resource not found. Ignoring since object must be deleted.")
+			log.V(1).Info("CraneImage resource not found. Ignoring since object must be deleted.")
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get CraneImage resource.")
@@ -114,10 +114,10 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Check if the image exists in the source registry and fetch its digest
 
 	// Load source registry authenticator
-	log.Info("Loading source registry authenticator.")
+	log.V(1).Info("Loading source registry authenticator.")
 	var sourceAuth authn.Authenticator
 	if craneImage.Spec.Source.CredentialsSecret != "" {
-		log.Info("Using credentials secret for source registry.")
+		log.V(1).Info("Using credentials secret for source registry.")
 		// Fetch the secret
 		var sourceRegistryCredentialsSecret corev1.Secret
 		sourceSecretName := client.ObjectKey{
@@ -135,7 +135,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 			return result, nil
 		}
-		log.Info("Successfully fetched credentials secret for source registry.")
+		log.V(1).Info("Successfully fetched credentials secret for source registry.")
 		sourceAuth, err = secretToAuthenticator(&sourceRegistryCredentialsSecret, sourceRegistry, &log)
 		if err != nil {
 			log.Error(err, "Failed to create authenticator from credentials secret.")
@@ -148,9 +148,9 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 			return result, nil
 		}
-		log.Info("Successfully created authenticator from destination credentials secret.")
+		log.V(1).Info("Successfully created authenticator from destination credentials secret.")
 	} else {
-		log.Info("No credentials secret provided for source registry.")
+		log.V(1).Info("No credentials secret provided for source registry.")
 		sourceAuth = authn.Anonymous
 	}
 
@@ -167,13 +167,13 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 		return result, nil
 	}
-	log.Info("Successfully fetched image digest from source registry.")
+	log.V(1).Info("Successfully fetched image digest from source registry.")
 
 	// Load destination registry authenticator
-	log.Info("Loading destination registry authenticator.")
+	log.V(1).Info("Loading destination registry authenticator.")
 	var destinationAuth authn.Authenticator
 	if craneImage.Spec.Destination.CredentialsSecret != "" {
-		log.Info("Using credentials secret for destination registry.")
+		log.V(1).Info("Using credentials secret for destination registry.")
 		// Fetch the secret
 		var destinationRegistryCredentialsSecret corev1.Secret
 		destinationSecretName := client.ObjectKey{
@@ -191,7 +191,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 			return result, nil
 		}
-		log.Info("Successfully fetched credentials secret for destination registry.")
+		log.V(1).Info("Successfully fetched credentials secret for destination registry.")
 		destinationAuth, err = secretToAuthenticator(&destinationRegistryCredentialsSecret, destinationRegistry, &log)
 		if err != nil {
 			log.Error(err, "Failed to create authenticator from credentials secret.")
@@ -204,9 +204,9 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 			return result, nil
 		}
-		log.Info("Successfully created authenticator from destination credentials secret.")
+		log.V(1).Info("Successfully created authenticator from destination credentials secret.")
 	} else {
-		log.Info("No credentials secret provided for destination registry.")
+		log.V(1).Info("No credentials secret provided for destination registry.")
 		destinationAuth = authn.Anonymous
 	}
 	// Check if the image exists in the destination registry
@@ -237,7 +237,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// If no passthrough cache, pull the image from the source registry
 	if craneImage.Spec.PassthroughCache.Registry == "" {
-		log.Info("Pulling image from source registry.")
+		log.V(1).Info("Pulling image from source registry.")
 
 		image, err = crane.Pull(sourceImage, crane.WithAuth(sourceAuth))
 		if err != nil {
@@ -260,10 +260,10 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		passthroughCacheRegistry := craneImage.Spec.PassthroughCache.Registry
 		// TODO add authenticator for passthrough cache
 		// Load source registry authenticator
-		log.Info("Loading source registry authenticator.")
+		log.V(1).Info("Loading source registry authenticator.")
 		var passthroughCacheAuth authn.Authenticator
 		if craneImage.Spec.PassthroughCache.CredentialsSecret != "" {
-			log.Info("Using credentials secret for source registry.")
+			log.V(1).Info("Using credentials secret for source registry.")
 			// Fetch the secret
 			var passthroughCacheRegistryCredentialsSecret corev1.Secret
 			passthroughCacheSecretName := client.ObjectKey{
@@ -281,7 +281,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				}
 				return result, nil
 			}
-			log.Info("Successfully fetched credentials secret for source registry.")
+			log.V(1).Info("Successfully fetched credentials secret for source registry.")
 			passthroughCacheAuth, err = secretToAuthenticator(&passthroughCacheRegistryCredentialsSecret, passthroughCacheRegistry, &log)
 			if err != nil {
 				log.Error(err, "Failed to create authenticator from credentials secret.")
@@ -294,9 +294,9 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				}
 				return result, nil
 			}
-			log.Info("Successfully created authenticator from passthrough cache credentials secret.")
+			log.V(1).Info("Successfully created authenticator from passthrough cache credentials secret.")
 		} else {
-			log.Info("No credentials secret provided for passthrough cache registry.")
+			log.V(1).Info("No credentials secret provided for passthrough cache registry.")
 			passthroughCacheAuth = authn.Anonymous
 		}
 		image, err = crane.Pull(passthroughCacheImage, crane.WithAuth(passthroughCacheAuth))
@@ -312,7 +312,7 @@ func (r *CraneImageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 			return result, nil
 		}
-		log.Info("Successfully pulled image from passthrough cache registry.")
+		log.V(1).Info("Successfully pulled image from passthrough cache registry.")
 	}
 
 	// ################################### PUSH ##########################################
@@ -364,7 +364,7 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 	if err != nil {
 		return nil, err
 	}
-	log.Info(fmt.Sprintf("Loaded authConfig for %s", registry))
+	log.V(1).Info(fmt.Sprintf("Loaded authConfig for %s", registry))
 	// Create auth from username and password
 	if authConfig.Username != "" && authConfig.Password != "" {
 		return authn.FromConfig(authn.AuthConfig{
@@ -385,7 +385,7 @@ func configFileToAuthenticator(configFile configfile.ConfigFile, registry string
 func secretToAuthenticator(secret *corev1.Secret, registry string, log *logr.Logger) (authn.Authenticator, error) {
 	// Check if the secret type is DockerConfigJson type or has non-empty DockerConfigJson key
 	if (secret.Type == corev1.SecretTypeDockerConfigJson) || (secret.Data[corev1.DockerConfigJsonKey] != nil) {
-		log.Info("Using Docker config JSON secret")
+		log.V(1).Info("Using Docker config JSON secret")
 		// Get encoded Docker config JSON
 		dockerConfigJSON := secret.Data[corev1.DockerConfigJsonKey]
 
@@ -404,7 +404,7 @@ func secretToAuthenticator(secret *corev1.Secret, registry string, log *logr.Log
 		username := string(secret.Data[corev1.BasicAuthUsernameKey])
 		password := string(secret.Data[corev1.BasicAuthPasswordKey])
 		// TODO REMOVE
-		log.Info("Using Basic Auth secret")
+		log.V(1).Info("Using Basic Auth secret")
 		return authn.FromConfig(authn.AuthConfig{
 			Username: username,
 			Password: password,
