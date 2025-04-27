@@ -466,7 +466,6 @@ func contains(slice []string, str string) bool {
 func removeDuplicates(strList []string) []string {
 	list := []string{}
 	for _, item := range strList {
-		fmt.Println(item)
 		if !contains(list, item) {
 			list = append(list, item)
 		}
