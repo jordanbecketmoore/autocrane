@@ -68,6 +68,7 @@ spec:
         image: controller:latest
         name: manager
         ports: []
+        imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
