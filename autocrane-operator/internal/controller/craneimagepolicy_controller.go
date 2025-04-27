@@ -405,6 +405,20 @@ func (r *CraneImagePolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// Range over childCraneImages
 	// and delete any that are not in imageTagPairs
 
+	// Update status to reflect success
+	childCraneImageCount := len(childCraneImages.Items)
+	craneImagePolicy.Status.State = "Success"
+	if childCraneImageCount == 0 {
+		craneImagePolicy.Status.Message = "No child CraneImage objects found."
+	} else if childCraneImageCount == 1 {
+		craneImagePolicy.Status.Message = "1 child CraneImage object found."
+	} else {
+		craneImagePolicy.Status.Message = fmt.Sprintf("%d child CraneImage objects found.", childCraneImageCount)
+	}
+	if statusErr := r.Status().Update(ctx, &craneImagePolicy); statusErr != nil {
+		log.Error(statusErr, "Failed to update CraneImage status.")
+		return ctrl.Result{}, statusErr
+	}
 	// Final return if haven't already
 	return result, nil
 }
